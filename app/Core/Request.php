@@ -13,6 +13,8 @@ final class Request
         public readonly string $body = '',
         public readonly array $headers = [],
         public readonly string $ip = '0.0.0.0',
+        public readonly array $form = [],
+        public readonly bool $https = false,
     ) {
     }
 
@@ -35,6 +37,8 @@ final class Request
             (string) file_get_contents('php://input'),
             $headers,
             (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'),
+            $_POST,
+            !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off',
         );
     }
 

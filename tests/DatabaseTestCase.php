@@ -12,6 +12,7 @@ use PDO;
 abstract class DatabaseTestCase extends TestCase
 {
     protected PDO $pdo;
+    protected bool $migrate = true;
 
     public function setUp(): void
     {
@@ -32,6 +33,8 @@ abstract class DatabaseTestCase extends TestCase
             $this->pdo->exec("DROP TABLE `$t`");
         }
         $this->pdo->exec('SET FOREIGN_KEY_CHECKS=1');
-        (new Migrator($this->pdo, dirname(__DIR__) . '/database/migrations'))->migrate();
+        if ($this->migrate) {
+            (new Migrator($this->pdo, dirname(__DIR__) . '/database/migrations'))->migrate();
+        }
     }
 }

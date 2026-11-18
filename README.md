@@ -2,7 +2,7 @@
 
 Plateforme web professionnelle de gestion de rendez-vous, centrée sur un calendrier interactif en grille (jour, semaine, mois, planning) inspiré du fonctionnement de Google Agenda, sans en reprendre l'identité graphique.
 
-> **État du projet : développement en cours (phases 1 à 3 terminées).**
+> **État du projet : développement en cours (phases 1 à 4 terminées).**
 > Les fonctionnalités listées dans « Objectifs » ne sont **pas** toutes livrées : voir « Avancement » ci-dessous pour ce qui existe réellement.
 
 ## Objectifs
@@ -89,15 +89,18 @@ RendezVous-Manager-Web/
 | 1. Architecture et fichiers | Terminée : noyau PHP (Env, Config, Database PDO avec TLS, Request/Response/Router, Logger avec masquage des secrets), API `GET /api/v1/health` et `GET /api/v1/version`, config, `.htaccess`, exemple Nginx |
 | 2. Base MySQL et migrations | Terminée : 4 migrations (19 tables dont `schema_migrations`, plus `login_attempts` et `password_resets`), migrateur avec sommes de contrôle, `scripts/migrate.php`, `database/schema.sql` généré, rôles et permissions initiaux |
 | 3. Authentification et permissions | Terminée : `POST /api/v1/auth/login`, `POST /auth/logout`, `GET /auth/me`, `POST /auth/password` ; Argon2id, sessions en base (jeton haché SHA-256, cookie HttpOnly/SameSite=Lax/Secure), expiration absolue et par inactivité, jeton CSRF + contrôle d'Origin, blocage anti-force brute (par identifiant et par IP, HTTP 429), audit sans secrets, permissions de rôle et de calendrier (`PermissionService`) |
-| 4 à 20 | Non commencées |
+| 4. Assistant d'installation | Terminée : `/install` en 7 étapes (bienvenue, prérequis, MySQL/MariaDB, vérification et migrations, administrateur, services, finalisation), jeton à usage unique généré en CLI (`php scripts/install_token.php`, seul le hachage est stocké, valable 2 h, invalidé après 10 échecs), verrou `storage/install.lock` après installation (l'assistant répond alors 404), `.env` écrit en 0600, aucune table existante jamais supprimée, base non reconnue refusée, reprise d'une installation existante avec conservation des données |
+| 5 à 20 | Non commencées |
+
+Limites de la phase 4 : les prérequis « cron », « Web Push » et « SMTP » ne sont que **signalés** (aucun envoi ni exécution de worker n'est testé) ; la page de connexion `/login` n'existe pas encore (phase 5), la redirection finale y mène donc vers un message provisoire ; la création automatique de la base n'est pas proposée (elle doit exister) ; le mode TLS « verify » n'a pas été testé contre un serveur TLS réel.
 
 Non fait dans la phase 3 : réinitialisation de mot de passe par e-mail (dépend du SMTP, phases 13/16), gestion des comptes (`/users`, phase 16), interface de connexion (phase 5). Le login lui-même n'est pas protégé par CSRF (aucune session n'existe encore).
 
-Il n'y a pas encore d'interface web ni d'assistant d'installation : le premier compte ne peut donc être créé que par code (`UserRepository::create`). `public/index.php` ne sert que l'API.
+Il n'y a pas encore d'interface web de connexion ni de calendrier. L'assistant d'installation a été essayé via le serveur intégré de PHP (redirection `/` → `/install`, page de jeton, en-têtes CSP et cookie) mais le parcours complet n'a été exécuté que par les tests automatisés.
 
 ### Vérifié
 
-- 23 tests (`php tests/run.php`) passent : unitaires (Env, routeur, découpage SQL, journalisation, mots de passe), migrations (tables, idempotence, seed, InnoDB/utf8mb4, contraintes, rejet d'une migration modifiée) et sécurité de l'authentification (cookies, jeton non stocké en clair, réponse identique pour compte inconnu, force brute, CSRF/Origin, expiration, désactivation, révocation après changement de mot de passe, audit, permissions de rôle et de calendrier).
+- 37 tests (`php tests/run.php`) passent : unitaires (Env, routeur, découpage SQL, journalisation, mots de passe), migrations (tables, idempotence, seed, InnoDB/utf8mb4, contraintes, rejet d'une migration modifiée) assistant d'installation (jeton, CSRF, prérequis, test et privilèges SQL, secrets non renvoyés, base étrangère intacte, flux complet puis verrouillage, reprise avec données conservées, échappement XSS), et sécurité de l'authentification (cookies, jeton non stocké en clair, réponse identique pour compte inconnu, force brute, CSRF/Origin, expiration, désactivation, révocation après changement de mot de passe, audit, permissions de rôle et de calendrier).
 - Les tests d'intégration ont été exécutés **uniquement sur MariaDB 10.11**. **MySQL 8 n'a pas été testé.**
 - Les tests d'authentification appellent le routeur directement (sans serveur HTTP ni HTTPS réels). Seules `/api/v1/version` et `/api/v1/health` ont été appelées via le serveur intégré de PHP. La connexion TLS à la base n'a pas été testée.
 
@@ -106,6 +109,7 @@ Il n'y a pas encore d'interface web ni d'assistant d'installation : le premier c
 ```bash
 composer install            # optionnel : un autoloader de secours existe
 cp .env.example .env        # puis renseigner DB_*
+php scripts/install_token.php  # jeton pour l'assistant web /install
 php scripts/migrate.php     # applique les migrations (--status pour l'état)
 php scripts/build_schema.php  # régénère database/schema.sql
 ```
