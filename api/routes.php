@@ -5,6 +5,8 @@ use App\Controllers\AuthController;
 use App\Controllers\AppointmentApiController;
 use App\Controllers\CalendarApiController;
 use App\Controllers\CategoryApiController;
+use App\Controllers\SyncApiController;
+use App\Repositories\SyncRepository;
 use App\Controllers\ContactApiController;
 use App\Repositories\CategoryRepository;
 use App\Repositories\ContactRepository;
@@ -61,6 +63,11 @@ return static function (Router $r, ?\PDO $injected = null): void {
         [$pdo, $guard, $perms] = $deps();
         return new CategoryApiController($guard, new CategoryRepository($pdo), $perms, $changes());
     };
+    $sync = static function () use ($deps): SyncApiController {
+        [$pdo, $guard, $perms] = $deps();
+        return new SyncApiController($guard, $perms, new SyncRepository($pdo));
+    };
+    $r->add('GET', '/api/v1/sync/changes', static fn (Request $q) => $sync()->changes($q));
     $r->add('GET', '/api/v1/calendars', static fn (Request $q) => $cal()->calendars($q));
     $r->add('POST', '/api/v1/calendars', static fn (Request $q) => $cal()->store($q));
     $r->add('PUT', '/api/v1/calendars/{id}', static fn (Request $q, array $p) => $cal()->update($q, $p));

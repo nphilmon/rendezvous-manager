@@ -156,6 +156,7 @@
       });
     }
     load();
+    document.addEventListener('rvm:sync', function (e) { if (window.RVM.sync.touches(e.detail, ['contact'])) load(); });
   }
 
   // =========================================================== CATÉGORIES ==========================================
@@ -189,6 +190,7 @@
       });
     }
     load();
+    document.addEventListener('rvm:sync', function (e) { if (window.RVM.sync.touches(e.detail, ['category', 'appointment'])) load(); });
   }
 
   // =========================================================== CALENDRIERS =========================================
@@ -313,6 +315,7 @@
       });
     }
     load();
+    document.addEventListener('rvm:sync', function (e) { if (window.RVM.sync.touches(e.detail, ['calendar'])) load(); });
   }
 
   ({ contacts: contacts, categories: categories, calendars: calendars }[kind] || function () {})();

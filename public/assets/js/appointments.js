@@ -102,6 +102,18 @@
   var contacts = function () { return ref('con', '/api/v1/contacts?per_page=500'); };
   function calendarOf(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
 
+  // ---- Synchronisation : invalidation des listes de référence et avertissement d'édition concurrente -------------------
+  document.addEventListener('rvm:sync', function (e) {
+    var d = e.detail;
+    if (d.reset || d.accessChanged || d.changes.some(function (c) { return c.entity === 'calendar'; })) delete cache.cal;
+    if (d.reset || d.changes.some(function (c) { return c.entity === 'category'; })) delete cache.cat;
+    if (d.reset || d.changes.some(function (c) { return c.entity === 'contact'; })) delete cache.con;
+    if (formDlg && formDlg.open && state && state.id) {
+      var hit = d.changes.filter(function (c) { return c.entity === 'appointment' && c.entity_id === state.id; }).pop(); // y compris un autre onglet du même utilisateur : le formulaire est modal, donc ce n'est pas lui
+      if (hit) showRemoteChange(hit.change === 'deleted');
+    }
+  });
+
   // ---- Détails d'un rendez-vous ---------------------------------------------------------------------------------------
   var dlg = el('dialog', 'ev-dialog'); dlg.setAttribute('aria-labelledby', 'ev-title');
   var detailsOpener = null;
@@ -471,6 +483,19 @@
     return cals.some(function (c) { return c.id === last; }) ? last : cals[0].id;
   }
 
+  /** Un autre utilisateur a modifié (ou supprimé) le rendez-vous en cours d'édition : avertissement non bloquant. */
+  function showRemoteChange(deleted) {
+    var box = form.querySelector('#af-conflict'); if (!box) return;
+    box.hidden = false; box.textContent = '';
+    box.appendChild(el('strong', '', deleted ? 'Ce rendez-vous vient d\'être supprimé par un autre utilisateur. ' : 'Ce rendez-vous vient d\'être modifié par un autre utilisateur. '));
+    if (!deleted) {
+      var occ = state.occurrence, id = state.id;
+      var b = el('button', 'btn', 'Recharger sa version'); b.type = 'button';
+      b.addEventListener('click', function () { openForm({ id: id, occurrence: occ || undefined }); });
+      box.append(b, document.createTextNode(' Vos modifications non enregistrées seraient perdues ; l\'enregistrement vous proposera aussi de choisir.'));
+    }
+  }
+
   function clearErrors() {
     form.querySelectorAll('.fld-err').forEach(function (p) { p.hidden = true; p.textContent = ''; });
     form.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid'); });
@@ -660,6 +685,7 @@
   filters.addEventListener('reset', function () { setTimeout(function () { currentPage = 1; load(); }, 0); });
   ['status', 'priority', 'calendar', 'sort', 'dir', 'trash'].forEach(function (n) { filters.elements[n].addEventListener('change', function () { currentPage = 1; load(); }); });
   document.addEventListener('rvm:appointments-changed', load);
+  document.addEventListener('rvm:sync', function (e) { if (window.RVM.sync.touches(e.detail, ['appointment', 'calendar'])) load(); });
   qsInit();
   calendars().then(function (cals) {
     calList = cals;

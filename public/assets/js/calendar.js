@@ -629,14 +629,31 @@
     });
   }
 
+  /** (Re)charge la liste des calendriers visibles et les droits associés. */
+  function loadCalendars() {
+    return fetch('/api/v1/calendars', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { if (r.status === 401) { location.href = '/login?next=' + encodeURIComponent(url()); return null; } return r.json(); })
+      .then(function (j) { if (j && j.data) { calendars = j.data; hidden = hidden.filter(function (id) { return calendars.some(function (c) { return c.id === id; }); }); buildCalendarList(); } })
+      .catch(function () { status('Liste des calendriers indisponible.', true); });
+  }
+
   function init() {
     var s = document.getElementById('cal-grid'); s.setAttribute('aria-busy', 'true');
     buildToolbar();
-    fetch('/api/v1/calendars', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-      .then(function (r) { if (r.status === 401) { location.href = '/login?next=' + encodeURIComponent(url()); return null; } return r.json(); })
-      .then(function (j) { calendars = (j && j.data) || []; buildCalendarList(); })
-      .catch(function () { status('Liste des calendriers indisponible.', true); })
-      .then(function () { s.removeAttribute('aria-busy'); refresh(); });
+    loadCalendars().then(function () { s.removeAttribute('aria-busy'); refresh(); });
   }
+
+  // Synchronisation : un autre utilisateur ou un autre onglet a modifié des données visibles. Pendant un glisser, on attend la fin.
+  var syncTries = 0;
+  document.addEventListener('rvm:sync', function onSync(e) {
+    var d = e.detail;
+    if (dragging && syncTries++ < 20) { setTimeout(function () { onSync(e); }, 500); return; }
+    syncTries = 0;
+    if (window.RVM.sync.touches({ reset: d.reset, accessChanged: d.accessChanged, changes: d.changes }, ['calendar']) && (d.reset || d.accessChanged || d.changes.some(function (c) { return c.entity === 'calendar'; }))) {
+      loadCalendars().then(refresh);
+    } else if (d.changes.some(function (c) { return c.entity === 'appointment'; })) {
+      refresh();
+    }
+  });
   init();
 })();

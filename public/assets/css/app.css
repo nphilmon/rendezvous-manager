@@ -170,3 +170,11 @@ label.radio{display:flex;align-items:center;gap:8px;font-weight:400;margin:8px 0
 .share-tbl th,.share-tbl td{padding:6px 8px;font-size:.85rem}.share-tbl input{width:auto}
 .lookup{display:flex;flex-direction:column;margin-top:4px;max-height:160px;overflow:auto}
 .tbl td .small{font-weight:400}
+
+/* Indicateur de synchronisation */
+button.sync{background:none;border:0;font:inherit;cursor:pointer;padding:6px 8px;border-radius:8px}
+button.sync:hover{background:var(--brand-soft)}
+button.sync.is-busy svg{animation:rvm-spin 1s linear infinite}
+button.sync.is-offline{color:var(--bad)}button.sync.is-error{color:var(--warn)}
+@keyframes rvm-spin{to{transform:rotate(360deg)}}
+.sync-banner{margin-bottom:12px}

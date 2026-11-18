@@ -26,7 +26,7 @@ final class PageTest extends DatabaseTestCase
         parent::setUp();
         $this->users = new UserRepository($this->pdo);
         $this->auth = new AuthService($this->pdo, $this->users, new AuditLogger($this->pdo));
-        $this->pages = new PageController($this->auth, new PermissionService($this->pdo), new StatsRepository($this->pdo));
+        $this->pages = new PageController($this->auth, new PermissionService($this->pdo), new StatsRepository($this->pdo), new \App\Repositories\SyncRepository($this->pdo));
     }
 
     private function user(string $name, string $role, string $first = 'Jean'): int

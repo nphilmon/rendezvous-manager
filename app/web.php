@@ -6,6 +6,7 @@ use App\Core\Database;
 use App\Core\Request;
 use App\Core\Router;
 use App\Repositories\StatsRepository;
+use App\Repositories\SyncRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuditLogger;
 use App\Services\AuthService;
@@ -20,6 +21,7 @@ return static function (Router $r): void {
             new AuthService($pdo, new UserRepository($pdo), new AuditLogger($pdo)),
             new PermissionService($pdo),
             new StatsRepository($pdo),
+            new SyncRepository($pdo),
         );
     };
 

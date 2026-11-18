@@ -1,3 +1,4 @@
+<div data-sync-banner="1" hidden></div>
 <h1>Tableau de bord</h1>
 <p class="muted">Bonjour <?= $e($user->firstName) ?>. Chiffres réels, limités aux calendriers auxquels vous avez accès (<?= (int) $calendarCount ?>).</p>
 <section class="cards" aria-label="Indicateurs">

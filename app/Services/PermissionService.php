@@ -52,6 +52,14 @@ final class PermissionService
         return $action === 'read' && $cal['visibility'] === 'organization';
     }
 
+    /** Empreinte de l'ensemble des calendriers lisibles : change quand un partage est accordé ou retiré. */
+    public function accessToken(AuthUser $u): string
+    {
+        $ids = $this->readableCalendarIds($u);
+        sort($ids);
+        return substr(sha1(implode(',', $ids)), 0, 12);
+    }
+
     /** @return list<int> identifiants des calendriers lisibles par l'utilisateur */
     public function readableCalendarIds(AuthUser $u): array
     {

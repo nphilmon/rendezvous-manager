@@ -77,15 +77,6 @@
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && sb.classList.contains('open')) { sidebar(false); st.focus(); } });
   }
 
-  // ---- État de connexion ---------------------------------------------------
-  var sync = $('#sync-state'), syncLabel = $('#sync-label');
-  function online() {
-    if (!sync) return;
-    sync.classList.toggle('offline', !navigator.onLine);
-    if (syncLabel) syncLabel.textContent = navigator.onLine ? 'En ligne' : 'Hors ligne';
-  }
-  window.addEventListener('online', online); window.addEventListener('offline', online); online();
-
   // ---- Mini-calendrier (fuseau de l'utilisateur, premier jour de semaine du calendrier) ----------------------
   var mc = $('#mini-cal');
   if (mc) {

@@ -6,6 +6,9 @@
 <meta name="robots" content="noindex">
 <meta name="csrf-token" content="<?= $e($csrf) ?>">
 <meta name="user-tz" content="<?= $e($tz) ?>">
+<meta name="sync-cursor" content="<?= (int) $syncCursor ?>">
+<meta name="sync-access" content="<?= $e($syncAccess) ?>">
+<meta name="sync-interval" content="<?= (int) $syncInterval ?>">
 <title><?= $e($title) ?> – <?= $e($appName) ?></title>
 <link rel="icon" href="/assets/icons/logo.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -44,7 +47,8 @@
   </nav>
   <?php endif; ?>
 
-  <span class="sync" id="sync-state" title="Synchronisation automatique multi-appareils : non encore disponible"><svg aria-hidden="true"><use href="#i-wifi"/></svg><span class="hide-sm" id="sync-label">En ligne</span></span>
+  <button class="sync" id="sync-state" type="button" aria-label="Actualiser maintenant" title="Actualiser maintenant"><svg aria-hidden="true"><use href="#i-wifi"/></svg><span class="hide-sm" id="sync-label">Synchronisation…</span></button>
+  <span class="sr-only" id="sync-live" role="status" aria-live="polite"></span>
   <a class="icon-btn bell" href="/notifications" aria-label="Notifications<?= $unread > 0 ? ' (' . (int) $unread . ' non lues)' : '' ?>"><svg><use href="#i-bell"/></svg><?php if ($unread > 0): ?><span class="badge"><?= (int) $unread ?></span><?php endif; ?></a>
 
   <div class="menu-wrap">
@@ -82,6 +86,7 @@
 </div>
 <script src="/assets/js/app.js" defer></script>
 <script src="/assets/js/appointments.js" defer></script>
+<script src="/assets/js/sync.js" defer></script>
 <?php if ($calendarNav): ?><script src="/assets/js/calendar.js" defer></script><?php endif; ?>
 <?php if ($manage): ?><script src="/assets/js/manage.js" defer></script><?php endif; ?>
 </body>

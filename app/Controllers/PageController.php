@@ -9,6 +9,7 @@ use App\Core\Response;
 use App\Core\View;
 use App\Models\AuthUser;
 use App\Repositories\StatsRepository;
+use App\Repositories\SyncRepository;
 use App\Services\AuthService;
 use App\Services\Navigation;
 use App\Services\PermissionService;
@@ -24,6 +25,7 @@ final class PageController
         private AuthService $auth,
         private PermissionService $perms,
         private StatsRepository $stats,
+        private ?SyncRepository $sync = null,
     ) {
     }
 
@@ -145,6 +147,7 @@ final class PageController
             'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
             'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
             'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
+            'syncCursor' => $this->sync?->maxId() ?? 0, 'syncAccess' => $this->perms->accessToken($u), 'syncInterval' => (int) Config::get('app.sync.interval', 30),
         ], null);
     }
 }

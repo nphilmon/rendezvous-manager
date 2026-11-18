@@ -20,6 +20,12 @@ return [
         'throttle_window'   => 900,       // fenêtre de comptage (secondes)
         'min_password'      => 12,
     ],
+    'sync'     => [
+        // Intervalle d'actualisation proposé aux navigateurs (secondes) ; borné à 2..300. 30 s en production.
+        'interval' => max(2, min(300, Env::int('SYNC_INTERVAL', 30))),
+        'max_changes' => 500,
+        'retention_days' => 30,
+    ],
     'paths'    => [
         'root'    => dirname(__DIR__),
         'storage' => dirname(__DIR__) . '/storage',
