@@ -7,5 +7,5 @@ RewriteRule ^(app|api|config|database|installer|scripts|storage|tests|workers|do
 RewriteRule (^|/)\.(?!well-known/) - [F,L]
 RewriteRule ^(README\.md|composer\.json|composer\.lock)$ - [F,L]
 RewriteRule ^$ public/ [L]
-RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !^public/
+RewriteCond %{REQUEST_URI} !^/public/
 RewriteRule ^(.*)$ public/$1 [L]

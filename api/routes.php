@@ -116,20 +116,6 @@ return static function (Router $r, ?\PDO $injected = null): void {
     $r->add('GET', '/api/v1/export/contacts', static fn (Request $q) => $transfer()->exportContacts($q));
     $r->add('POST', '/api/v1/import/appointments', static fn (Request $q) => $transfer()->importAppointments($q));
     $r->add('POST', '/api/v1/import/contacts', static fn (Request $q) => $transfer()->importContacts($q));
-    $users = static function () use ($deps): UserApiController {
-        [$pdo, $guard] = $deps();
-        return new UserApiController($guard, new UserAdminService($pdo, new UserRepository($pdo), new AuditLogger($pdo)));
-    };
-    $r->add('GET', '/api/v1/roles', static fn (Request $q) => $users()->roles($q));
-    $r->add('GET', '/api/v1/users', static fn (Request $q) => $users()->index($q));
-    $r->add('POST', '/api/v1/users', static fn (Request $q) => $users()->create($q));
-    $r->add('GET', '/api/v1/users/{id}', static fn (Request $q, array $p) => $users()->show($q, $p));
-    $r->add('PUT', '/api/v1/users/{id}', static fn (Request $q, array $p) => $users()->update($q, $p));
-    $r->add('POST', '/api/v1/users/{id}/deactivate', static fn (Request $q, array $p) => $users()->deactivate($q, $p));
-    $r->add('POST', '/api/v1/users/{id}/activate', static fn (Request $q, array $p) => $users()->activate($q, $p));
-    $r->add('POST', '/api/v1/users/{id}/reset-password', static fn (Request $q, array $p) => $users()->resetPassword($q, $p));
-    $r->add('POST', '/api/v1/users/{id}/unlock', static fn (Request $q, array $p) => $users()->unlock($q, $p));
-    $r->add('POST', '/api/v1/users/{id}/revoke-sessions', static fn (Request $q, array $p) => $users()->revokeSessions($q, $p));
     $r->add('GET', '/api/v1/dashboard', static fn (Request $q) => $dash()->show($q));
     $r->add('GET', '/api/v1/push/config', static fn (Request $q) => $push()->config($q));
     $r->add('POST', '/api/v1/push/subscribe', static fn (Request $q) => $push()->subscribe($q));
@@ -152,6 +138,20 @@ return static function (Router $r, ?\PDO $injected = null): void {
     $r->add('GET', '/api/v1/calendars/{id}/permissions', static fn (Request $q, array $p) => $cal()->permissions($q, $p));
     $r->add('PUT', '/api/v1/calendars/{id}/permissions', static fn (Request $q, array $p) => $cal()->setPermissions($q, $p));
     $r->add('GET', '/api/v1/users/lookup', static fn (Request $q) => $cal()->lookupUsers($q));
+    $users = static function () use ($deps): UserApiController {
+        [$pdo, $guard] = $deps();
+        return new UserApiController($guard, new UserAdminService($pdo, new UserRepository($pdo), new AuditLogger($pdo)));
+    };
+    $r->add('GET', '/api/v1/roles', static fn (Request $q) => $users()->roles($q));
+    $r->add('GET', '/api/v1/users', static fn (Request $q) => $users()->index($q));
+    $r->add('POST', '/api/v1/users', static fn (Request $q) => $users()->create($q));
+    $r->add('GET', '/api/v1/users/{id}', static fn (Request $q, array $p) => $users()->show($q, $p));
+    $r->add('PUT', '/api/v1/users/{id}', static fn (Request $q, array $p) => $users()->update($q, $p));
+    $r->add('POST', '/api/v1/users/{id}/deactivate', static fn (Request $q, array $p) => $users()->deactivate($q, $p));
+    $r->add('POST', '/api/v1/users/{id}/activate', static fn (Request $q, array $p) => $users()->activate($q, $p));
+    $r->add('POST', '/api/v1/users/{id}/reset-password', static fn (Request $q, array $p) => $users()->resetPassword($q, $p));
+    $r->add('POST', '/api/v1/users/{id}/unlock', static fn (Request $q, array $p) => $users()->unlock($q, $p));
+    $r->add('POST', '/api/v1/users/{id}/revoke-sessions', static fn (Request $q, array $p) => $users()->revokeSessions($q, $p));
     $r->add('GET', '/api/v1/categories', static fn (Request $q) => $category()->index($q));
     $r->add('POST', '/api/v1/categories', static fn (Request $q) => $category()->store($q));
     $r->add('PUT', '/api/v1/categories/{id}', static fn (Request $q, array $p) => $category()->update($q, $p));
