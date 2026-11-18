@@ -91,6 +91,18 @@ final class PageController
             'canCreate' => $u->can('appointments.write')], 'pages/manage', ['manage' => true]);
     }
 
+    /** Journal d'audit (history.js), droit « audit.view ». */
+    public function history(Request $req): Response
+    {
+        return $this->page($req, 'history', 'Historique', fn (AuthUser $u) => [], 'pages/history', ['historyPage' => true]);
+    }
+
+    /** Sauvegardes (backups.js), droit « backups.manage ». */
+    public function backups(Request $req): Response
+    {
+        return $this->page($req, 'backups', 'Sauvegardes', fn (AuthUser $u) => ['keep' => (int) Config::get('app.backup.keep', 14)], 'pages/backups', ['backupsPage' => true]);
+    }
+
     /** Administration des utilisateurs (users.js) : droit « users.manage » vérifié par la navigation et par l'API. */
     public function users(Request $req): Response
     {
@@ -162,7 +174,7 @@ final class PageController
         return View::render('layout', $extra + [
             'user' => $u, 'csrf' => $ctx['csrf'], 'nav' => Navigation::visibleTo($u), 'current' => $navKey, 'title' => $title,
             'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
-            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'dashboard' => false, 'transfer' => false, 'usersAdmin' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
+            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'dashboard' => false, 'transfer' => false, 'usersAdmin' => false, 'historyPage' => false, 'backupsPage' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
             'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
             'syncCursor' => $this->sync?->maxId() ?? 0, 'syncAccess' => $this->perms->accessToken($u),
             'defaultReminder' => (string) ($this->settings?->notifications($u->id)['default_reminder'] ?? ''), 'syncInterval' => (int) Config::get('app.sync.interval', 30),

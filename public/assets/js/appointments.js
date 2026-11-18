@@ -154,9 +154,38 @@
     if (raw.deleted) row('État', 'Dans la corbeille');
     dlg.appendChild(dl);
     if (raw.description) dlg.appendChild(el('p', 'desc', raw.description));
+    dlg.appendChild(historySection(raw.id));
     dlg.appendChild(actions(raw, cal, function () { dlg.close(); }));
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
     x.focus();
+  }
+
+  // ---- Historique d'un rendez-vous (journal d'audit, chargé à l'ouverture de la section) ---------------------------------------
+  var FIELD = { title: 'Titre', location: 'Lieu', address: 'Adresse', status: 'Statut', priority: 'Priorité', start_utc: 'Début (UTC)', end_utc: 'Fin (UTC)', all_day: 'Journée entière', timezone: 'Fuseau',
+    calendar_id: 'Calendrier', category_id: 'Catégorie', contact_id: 'Contact', color: 'Couleur', description: 'Description', notes: 'Notes' };
+  function historySection(id) {
+    var box = el('details', 'hist'), sum = el('summary', '', 'Historique'), body = el('div', 'hist-body'), loaded = false;
+    box.append(sum, body);
+    box.addEventListener('toggle', function () {
+      if (!box.open || loaded) return; loaded = true; body.textContent = 'Chargement…';
+      api('GET', '/api/v1/appointments/' + id + '/history').then(function (r) {
+        body.textContent = '';
+        if (!r.ok) { body.textContent = 'Historique indisponible.'; return; }
+        if (!r.data.data.length) { body.appendChild(el('p', 'muted small', 'Aucune entrée.')); return; }
+        var fmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short', timeZone: TZ }), ul = el('ul', 'hist-list');
+        r.data.data.forEach(function (h) {
+          var li = el('li'), t = el('div', '', fmt.format(new Date(h.at)) + ' — ' + h.label + (h.user ? ' par ' + h.user.name : ''));
+          li.appendChild(t);
+          var ch = h.details && h.details.changes;
+          if (ch && typeof ch === 'object') Object.keys(ch).forEach(function (k) {
+            li.appendChild(el('div', 'muted small', (FIELD[k] || k) + ' : ' + (Array.isArray(ch[k]) ? (ch[k][0] || '∅') + ' → ' + (ch[k][1] || '∅') : ch[k])));
+          });
+          ul.appendChild(li);
+        });
+        body.appendChild(ul);
+      });
+    });
+    return box;
   }
 
   // ---- Actions (modifier, dupliquer, reporter, annuler, terminer, supprimer, restaurer) ---------------------------------------

@@ -7,6 +7,10 @@ use App\Controllers\CalendarApiController;
 use App\Controllers\CategoryApiController;
 use App\Controllers\DashboardApiController;
 use App\Controllers\EmailApiController;
+use App\Controllers\AuditApiController;
+use App\Controllers\BackupApiController;
+use App\Repositories\AuditRepository;
+use App\Services\Backup\BackupService;
 use App\Controllers\UserApiController;
 use App\Services\UserAdminService;
 use App\Controllers\TransferApiController;
@@ -116,6 +120,22 @@ return static function (Router $r, ?\PDO $injected = null): void {
     $r->add('GET', '/api/v1/export/contacts', static fn (Request $q) => $transfer()->exportContacts($q));
     $r->add('POST', '/api/v1/import/appointments', static fn (Request $q) => $transfer()->importAppointments($q));
     $r->add('POST', '/api/v1/import/contacts', static fn (Request $q) => $transfer()->importContacts($q));
+    $audit = static function () use ($deps): AuditApiController {
+        [$pdo, $guard, $perms] = $deps();
+        return new AuditApiController($guard, new AuditRepository($pdo), new AppointmentRepository($pdo), $perms);
+    };
+    $backup = static function () use ($deps): BackupApiController {
+        [$pdo, $guard] = $deps();
+        $keep = (int) Config::get('app.backup.keep', 14);
+        return new BackupApiController($guard, new BackupService($pdo, (string) Config::get('app.backup.dir'), (string) Config::get('app.version')), new AuditLogger($pdo), $keep);
+    };
+    $r->add('GET', '/api/v1/audit', static fn (Request $q) => $audit()->index($q));
+    $r->add('GET', '/api/v1/appointments/{id}/history', static fn (Request $q, array $p) => $audit()->appointmentHistory($q, $p));
+    $r->add('GET', '/api/v1/backups', static fn (Request $q) => $backup()->index($q));
+    $r->add('POST', '/api/v1/backups', static fn (Request $q) => $backup()->create($q));
+    $r->add('GET', '/api/v1/backups/{name}/download', static fn (Request $q, array $p) => $backup()->download($q, $p));
+    $r->add('POST', '/api/v1/backups/{name}/verify', static fn (Request $q, array $p) => $backup()->verify($q, $p));
+    $r->add('DELETE', '/api/v1/backups/{name}', static fn (Request $q, array $p) => $backup()->destroy($q, $p));
     $r->add('GET', '/api/v1/dashboard', static fn (Request $q) => $dash()->show($q));
     $r->add('GET', '/api/v1/push/config', static fn (Request $q) => $push()->config($q));
     $r->add('POST', '/api/v1/push/subscribe', static fn (Request $q) => $push()->subscribe($q));

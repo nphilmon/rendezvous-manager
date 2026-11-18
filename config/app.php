@@ -26,6 +26,13 @@ return [
         'max_changes' => 500,
         'retention_days' => 30,
     ],
+    'backup'   => [
+        'dir'  => Env::get('BACKUP_DIR', '') ?: dirname(__DIR__) . '/storage/backups',
+        'keep' => max(1, Env::int('BACKUP_KEEP', 14)), // nombre de sauvegardes conservées
+    ],
+    'audit'    => [
+        'retention_days' => max(0, Env::int('AUDIT_RETENTION_DAYS', 0)), // 0 = conservation illimitée
+    ],
     'paths'    => [
         'root'    => dirname(__DIR__),
         'storage' => dirname(__DIR__) . '/storage',

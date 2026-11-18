@@ -38,6 +38,8 @@ return static function (Router $r): void {
     }
     $r->add('GET', '/appointments/new', static fn (Request $q) => $page()->appointments($q, 'all', true));
 
+    $r->add('GET', '/history', static fn (Request $q) => $page()->history($q));
+    $r->add('GET', '/backups', static fn (Request $q) => $page()->backups($q));
     $r->add('GET', '/users', static fn (Request $q) => $page()->users($q));
     $r->add('GET', '/import-export', static fn (Request $q) => $page()->transfer($q));
 

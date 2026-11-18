@@ -90,6 +90,8 @@
 <script src="/assets/js/sync.js" defer></script>
 <?php if ($calendarNav): ?><script src="/assets/js/calendar.js" defer></script><?php endif; ?>
 <?php if (!empty($dashboard)): ?><script src="/assets/js/dashboard.js" defer></script><?php endif; ?>
+<?php if (!empty($historyPage)): ?><script src="/assets/js/history.js" defer></script><?php endif; ?>
+<?php if (!empty($backupsPage)): ?><script src="/assets/js/backups.js" defer></script><?php endif; ?>
 <?php if (!empty($usersAdmin)): ?><script src="/assets/js/users.js" defer></script><?php endif; ?>
 <?php if (!empty($transfer)): ?><script src="/assets/js/transfer.js" defer></script><?php endif; ?>
 <?php if ($manage): ?><script src="/assets/js/manage.js" defer></script><?php endif; ?>

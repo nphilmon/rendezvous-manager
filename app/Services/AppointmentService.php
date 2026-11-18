@@ -106,7 +106,7 @@ final class AppointmentService
             if ($data['calendar_id'] !== (int) $row['calendar_id']) {
                 $this->repo->recordChange((int) $row['calendar_id'], $id, 'deleted', $u->id); // disparaît de l'ancien calendrier
             }
-            $this->audit->log('appointment.' . $action, $u->id, 'appointment', $id, $ip, ['calendar_id' => $data['calendar_id']]);
+            $this->audit->log('appointment.' . $action, $u->id, 'appointment', $id, $ip, ['calendar_id' => $data['calendar_id'], 'changes' => self::diff($row, $data)]);
         });
         return $this->present($this->repo->find($id), $u);
     }
@@ -344,7 +344,7 @@ final class AppointmentService
             if ($data['calendar_id'] !== (int) $row['calendar_id']) {
                 $this->repo->recordChange((int) $row['calendar_id'], $id, 'deleted', $u->id);
             }
-            $this->audit->log('appointment.' . $action . '_series', $u->id, 'appointment', $id, $ip, ['scope' => 'all']);
+            $this->audit->log('appointment.' . $action . '_series', $u->id, 'appointment', $id, $ip, ['scope' => 'all', 'changes' => self::diff($row, $data)]);
         });
         return $this->get($u, $id);
     }
@@ -538,6 +538,28 @@ final class AppointmentService
             'update' => $this->perms->canAccessCalendar($u, (int) $row['calendar_id'], 'update'),
             'delete' => $this->perms->canAccessCalendar($u, (int) $row['calendar_id'], 'delete'),
         ];
+        return $out;
+    }
+
+    /**
+     * Champs modifiés pour le journal (ancienne et nouvelle valeur, tronquées) ; description et notes : simple mention « modifié ».
+     * @param array<string,mixed> $old @param array<string,mixed> $new @return array<string,mixed>
+     */
+    private static function diff(array $old, array $new): array
+    {
+        $norm = static fn (mixed $v): string => is_bool($v) ? (string) (int) $v : (string) ($v ?? '');
+        $cut = static fn (string $v): string => mb_strlen($v) > 120 ? mb_substr($v, 0, 120) . '…' : $v;
+        $out = [];
+        foreach (['title', 'location', 'address', 'status', 'priority', 'start_utc', 'end_utc', 'all_day', 'timezone', 'calendar_id', 'category_id', 'contact_id', 'color'] as $k) {
+            if ($norm($old[$k] ?? null) !== $norm($new[$k] ?? null)) {
+                $out[$k] = [$cut($norm($old[$k] ?? null)), $cut($norm($new[$k] ?? null))];
+            }
+        }
+        foreach (['description', 'notes'] as $k) {
+            if ($norm($old[$k] ?? null) !== $norm($new[$k] ?? null)) {
+                $out[$k] = 'modifié';
+            }
+        }
         return $out;
     }
 

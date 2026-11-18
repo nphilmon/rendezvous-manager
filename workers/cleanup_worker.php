@@ -14,7 +14,7 @@ use App\Core\Logger;
 use App\Services\Maintenance;
 
 try {
-    $res = (new Maintenance(Database::connection()))->run((int) Config::get('app.sync.retention_days', 30));
+    $res = (new Maintenance(Database::connection()))->run((int) Config::get('app.sync.retention_days', 30), 30, 7, (int) Config::get('app.audit.retention_days', 0));
     Logger::log('info', 'cleanup', $res);
     echo json_encode($res), PHP_EOL;
 } catch (Throwable $e) {

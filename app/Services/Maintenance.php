@@ -14,7 +14,7 @@ final class Maintenance
     }
 
     /** @return array<string,int> lignes supprimées par table */
-    public function run(int $syncDays = 30, int $sessionDays = 30, int $attemptDays = 7): array
+    public function run(int $syncDays = 30, int $sessionDays = 30, int $attemptDays = 7, int $auditDays = 0): array
     {
         $out = ['sync_changes' => (new SyncRepository($this->pdo))->prune($syncDays)];
         $st = $this->pdo->prepare('DELETE FROM user_sessions WHERE (expires_at < ? OR revoked_at IS NOT NULL) AND COALESCE(revoked_at, expires_at) < ?');
@@ -27,6 +27,11 @@ final class Maintenance
         $st = $this->pdo->prepare('DELETE FROM password_resets WHERE expires_at < ? ');
         $st->execute([gmdate('Y-m-d H:i:s', time() - 86400)]);
         $out['password_resets'] = $st->rowCount();
+        if ($auditDays > 0) {
+            $st = $this->pdo->prepare('DELETE FROM audit_logs WHERE created_at < ?');
+            $st->execute([gmdate('Y-m-d H:i:s', time() - $auditDays * 86400)]);
+            $out['audit_logs'] = $st->rowCount();
+        }
         return $out;
     }
 }

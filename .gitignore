@@ -6,6 +6,7 @@
 /storage/backups/*
 /storage/install.lock
 !/storage/*/.gitkeep
+!/storage/.htaccess
 *.log
 *.sql.enc
 .DS_Store
