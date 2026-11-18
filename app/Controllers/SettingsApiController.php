@@ -8,23 +8,22 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Middleware\Authenticator;
 use App\Repositories\SettingsRepository;
+use App\Services\Notifications\Channels;
+use App\Services\Notifications\ReminderChannelSync;
 use App\Validation\AppointmentValidator;
 use App\Validation\Rules;
 
 /** Réglages de l'utilisateur connecté (groupe « notifications » pour l'instant ; les autres groupes arrivent en phase 21). */
 final class SettingsApiController
 {
-    /** Canaux réellement disponibles sur ce serveur (push et e-mail : phase 13). */
-    public const CHANNELS_AVAILABLE = ['inapp'];
-
-    public function __construct(private Authenticator $guard, private SettingsRepository $settings)
+    public function __construct(private Authenticator $guard, private SettingsRepository $settings, private ?\PDO $pdo = null)
     {
     }
 
     public function show(Request $req): Response
     {
         $u = $this->guard->require($req)['user'];
-        return Response::json(['notifications' => $this->settings->notifications($u->id), 'meta' => ['channels_available' => self::CHANNELS_AVAILABLE, 'timezone' => $u->timezone]]);
+        return Response::json(['notifications' => $this->settings->notifications($u->id), 'meta' => ['channels_available' => Channels::available(), 'timezone' => $u->timezone]]);
     }
 
     public function update(Request $req): Response
@@ -44,8 +43,9 @@ final class SettingsApiController
             is_bool($in['enabled']) ? $out['enabled'] = $in['enabled'] : $e['enabled'][] = 'Booléen attendu.';
         }
         if (array_key_exists('channels', $in)) {
-            if (!is_array($in['channels']) || array_diff($in['channels'], self::CHANNELS_AVAILABLE) || !in_array('inapp', $in['channels'], true)) {
-                $e['channels'][] = 'Canaux disponibles : ' . implode(', ', self::CHANNELS_AVAILABLE) . ' (« inapp » obligatoire).';
+            $avail = Channels::available();
+            if (!is_array($in['channels']) || array_diff($in['channels'], $avail) || !in_array('inapp', $in['channels'], true)) {
+                $e['channels'][] = 'Canaux disponibles : ' . implode(', ', $avail) . ' (« inapp » obligatoire).';
             } else {
                 $out['channels'] = array_values(array_unique($in['channels']));
             }
@@ -78,7 +78,11 @@ final class SettingsApiController
             $e['quiet_start'][] = 'Renseignez le début et la fin des heures silencieuses (ou aucun des deux).';
         }
         Rules::throwIf($e);
+        $before = $this->settings->notifications($u->id)['channels'];
         $this->settings->saveNotifications($u->id, $out);
+        if (isset($out['channels']) && $out['channels'] !== $before && $this->pdo !== null) {
+            (new ReminderChannelSync($this->pdo))->apply($u->id, $out['channels']);
+        }
         return $this->show($req);
     }
 }

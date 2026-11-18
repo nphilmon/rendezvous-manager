@@ -14,13 +14,15 @@ require dirname(__DIR__) . '/app/bootstrap.php';
 use App\Core\Config;
 use App\Core\Database;
 use App\Core\Logger;
+use App\Services\Notifications\Channels;
 use App\Services\Notifications\NotificationEngine;
 
 $workerId = substr(gethostname() . '-' . getmypid() . '-' . bin2hex(random_bytes(2)), 0, 64);
 $loop = in_array('--loop', $argv, true);
 $deadline = time() + 55;
 try {
-    $engine = new NotificationEngine(Database::connection(), $workerId);
+    $pdo = Database::connection();
+    $engine = new NotificationEngine($pdo, $workerId, Channels::senders($pdo)); // in-app + push/e-mail si configurés
     do {
         $stats = $engine->run();
         @touch((string) Config::get('app.paths.logs') . '/cron_heartbeat'); // l'installateur et la supervision s'y fient

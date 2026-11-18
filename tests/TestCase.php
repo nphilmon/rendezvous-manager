@@ -13,6 +13,11 @@ abstract class TestCase
     {
     }
 
+    /** Appelé après chaque test, même en cas d'échec. */
+    public function tearDown(): void
+    {
+    }
+
     protected function assertSame(mixed $expected, mixed $actual, string $msg = ''): void
     {
         if ($expected !== $actual) {

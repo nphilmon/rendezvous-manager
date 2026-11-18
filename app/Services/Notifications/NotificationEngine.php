@@ -43,12 +43,12 @@ final class NotificationEngine
     }
 
     /** @return array<string,int> compteurs de l'exécution */
-    public function run(?DateTimeImmutable $now = null, int $batch = 100, int $maxBatches = 20): array
+    public function run(?DateTimeImmutable $now = null, int $batch = 100, int $maxBatches = 20, bool $plan = true): array
     {
         $now ??= new DateTimeImmutable('now', new DateTimeZone('UTC'));
         $stats = ['recovered' => 0, 'planned' => 0, 'claimed' => 0, 'sent' => 0, 'retried' => 0, 'failed' => 0, 'cancelled' => 0, 'deferred' => 0];
         $stats['recovered'] = $this->recoverStale($now);
-        $stats['planned'] = $this->planOnce($now);
+        $stats['planned'] = $plan ? $this->planOnce($now) : 0;
         for ($i = 0; $i < $maxBatches; $i++) {
             $rows = $this->retry(fn () => $this->claim($now, $batch));
             if (!$rows) {

@@ -5,7 +5,11 @@ use App\Controllers\AuthController;
 use App\Controllers\AppointmentApiController;
 use App\Controllers\CalendarApiController;
 use App\Controllers\CategoryApiController;
+use App\Controllers\EmailApiController;
 use App\Controllers\NotificationApiController;
+use App\Controllers\PushApiController;
+use App\Repositories\PushSubscriptionRepository;
+use App\Services\Push\EndpointPolicy;
 use App\Controllers\SettingsApiController;
 use App\Controllers\SyncApiController;
 use App\Repositories\NotificationRepository;
@@ -78,8 +82,23 @@ return static function (Router $r, ?\PDO $injected = null): void {
     };
     $settingsCtl = static function () use ($deps): SettingsApiController {
         [$pdo, $guard] = $deps();
-        return new SettingsApiController($guard, new SettingsRepository($pdo));
+        return new SettingsApiController($guard, new SettingsRepository($pdo), $pdo);
     };
+    $push = static function () use ($deps): PushApiController {
+        [$pdo, $guard] = $deps();
+        return new PushApiController($guard, new PushSubscriptionRepository($pdo), $pdo, new AuditLogger($pdo), EndpointPolicy::fromConfig());
+    };
+    $email = static function () use ($deps): EmailApiController {
+        [$pdo, $guard] = $deps();
+        return new EmailApiController($guard, $pdo, new AuditLogger($pdo));
+    };
+    $r->add('POST', '/api/v1/email/test', static fn (Request $q) => $email()->test($q));
+    $r->add('GET', '/api/v1/push/config', static fn (Request $q) => $push()->config($q));
+    $r->add('POST', '/api/v1/push/subscribe', static fn (Request $q) => $push()->subscribe($q));
+    $r->add('POST', '/api/v1/push/unsubscribe', static fn (Request $q) => $push()->unsubscribe($q));
+    $r->add('GET', '/api/v1/push/subscriptions', static fn (Request $q) => $push()->subscriptions($q));
+    $r->add('POST', '/api/v1/push/test', static fn (Request $q) => $push()->test($q));
+    $r->add('GET', '/api/v1/push/deliveries', static fn (Request $q) => $push()->deliveries($q));
     $r->add('GET', '/api/v1/notifications', static fn (Request $q) => $notif()->index($q));
     $r->add('GET', '/api/v1/notifications/count', static fn (Request $q) => $notif()->count($q));
     $r->add('GET', '/api/v1/notifications/upcoming', static fn (Request $q) => $notif()->upcoming($q));

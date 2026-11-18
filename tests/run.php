@@ -20,8 +20,12 @@ foreach (glob(__DIR__ . '/{Unit,Integration,Security}/*Test.php', GLOB_BRACE) ?:
             continue;
         }
         try {
-            $t->setUp();
-            $t->$method();
+            try {
+                $t->setUp();
+                $t->$method();
+            } finally {
+                $t->tearDown();
+            }
             $pass++;
             echo "  ok    $class::$method\n";
         } catch (Tests\SkipTest $e) {

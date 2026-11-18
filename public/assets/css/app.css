@@ -188,3 +188,5 @@ button.sync.is-offline{color:var(--bad)}button.sync.is-error{color:var(--warn)}
 .notif .btns{display:flex;gap:6px;flex-wrap:wrap}
 fieldset.chan{border:1px solid var(--line);border-radius:10px;margin:12px 0 0;padding:4px 12px 8px}.chan legend{font-size:.85rem;font-weight:600;padding:0 6px}
 .panel label.check{display:flex;align-items:center;gap:8px;font-weight:400}.panel label.check input{width:auto}
+.actions-row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.dev{padding:4px 0;font-size:.88rem;border-bottom:1px solid var(--line)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
