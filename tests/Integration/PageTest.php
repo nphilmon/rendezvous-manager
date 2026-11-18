@@ -123,6 +123,7 @@ final class PageTest extends DatabaseTestCase
                 $key === 'dashboard' => $this->pages->dashboard($req),
                 $key === 'calendar' => $this->pages->calendar($req),
                 $key === 'settings' => $this->pages->settings($req),
+                $key === 'transfer' => $this->pages->transfer($req),
                 in_array($key, ['all', 'mine', 'today', 'upcoming'], true) => $this->pages->appointments($req, $key),
                 in_array($key, ['contacts', 'categories', 'calendars', 'notifications'], true) => $this->pages->manage($req, $key),
                 default => $this->pages->module($req, $key, $item['label'], $item['phase']),

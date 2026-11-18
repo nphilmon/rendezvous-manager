@@ -91,6 +91,13 @@ final class PageController
             'canCreate' => $u->can('appointments.write')], 'pages/manage', ['manage' => true]);
     }
 
+    /** Import / export (transfer.js) : l'import n'est proposé qu'avec le droit « data.import ». */
+    public function transfer(Request $req): Response
+    {
+        return $this->page($req, 'transfer', 'Import / export', fn (AuthUser $u) => ['canImport' => $u->can('data.import'), 'canContacts' => $u->can('contacts.read'),
+            'canImportContacts' => $u->can('data.import') && $u->can('contacts.write'), 'canCreate' => $u->can('appointments.write'), 'statuses' => self::STATUS_LABELS], 'pages/transfer', ['transfer' => true]);
+    }
+
     public function module(Request $req, string $key, string $title, int $phase, ?string $perm = null, ?string $navKey = null): Response
     {
         $q = $req->query['q'] ?? null;
@@ -146,7 +153,7 @@ final class PageController
         return View::render('layout', $extra + [
             'user' => $u, 'csrf' => $ctx['csrf'], 'nav' => Navigation::visibleTo($u), 'current' => $navKey, 'title' => $title,
             'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
-            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'dashboard' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
+            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'dashboard' => false, 'transfer' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
             'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
             'syncCursor' => $this->sync?->maxId() ?? 0, 'syncAccess' => $this->perms->accessToken($u),
             'defaultReminder' => (string) ($this->settings?->notifications($u->id)['default_reminder'] ?? ''), 'syncInterval' => (int) Config::get('app.sync.interval', 30),

@@ -89,6 +89,35 @@ final class AppointmentRepository
         return ['rows' => array_slice($rows, 0, self::MAX_ROWS), 'truncated' => count($rows) > self::MAX_ROWS];
     }
 
+    /**
+     * Rendez-vous à exporter : une ligne par rendez-vous (une série reste une seule ligne maître), supprimés exclus.
+     * Une série est retenue si elle peut avoir une occurrence dans la période. $limit + 1 lignes au plus (le dépassement est détecté par l'appelant).
+     * @param list<int> $calendarIds @return list<array<string,mixed>>
+     */
+    public function exportRows(array $calendarIds, ?string $fromUtc, ?string $toUtc, ?string $status, int $limit): array
+    {
+        if ($calendarIds === []) {
+            return [];
+        }
+        $w = ['a.deleted_at IS NULL', 'a.calendar_id IN (' . implode(',', array_fill(0, count($calendarIds), '?')) . ')'];
+        $args = $calendarIds;
+        if ($status !== null) {
+            $w[] = 'a.status = ?';
+            $args[] = $status;
+        }
+        if ($toUtc !== null) {
+            $w[] = 'a.start_utc < ?';
+            $args[] = $toUtc;
+        }
+        if ($fromUtc !== null) {
+            $w[] = '(CASE WHEN r.id IS NULL THEN a.end_utc > ? ELSE (r.until_utc IS NULL OR r.until_utc >= ?) END)';
+            array_push($args, $fromUtc, $fromUtc);
+        }
+        $st = $this->pdo->prepare(self::select() . ' WHERE ' . implode(' AND ', $w) . ' ORDER BY a.start_utc, a.id LIMIT ' . ($limit + 1));
+        $st->execute($args);
+        return $st->fetchAll();
+    }
+
     /** @param array<string,mixed> $master @param array{original:string,start:string,end:string,overrides:array<string,mixed>} $o @return array<string,mixed> */
     public static function occurrenceRow(array $master, array $o): array
     {

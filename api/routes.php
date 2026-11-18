@@ -7,6 +7,8 @@ use App\Controllers\CalendarApiController;
 use App\Controllers\CategoryApiController;
 use App\Controllers\DashboardApiController;
 use App\Controllers\EmailApiController;
+use App\Controllers\TransferApiController;
+use App\Services\Transfer\{ExportService, ImportService};
 use App\Repositories\StatsRepository;
 use App\Services\DashboardService;
 use App\Controllers\NotificationApiController;
@@ -100,6 +102,18 @@ return static function (Router $r, ?\PDO $injected = null): void {
         [$pdo, $guard, $perms] = $deps();
         return new DashboardApiController($guard, new DashboardService($pdo, $perms, new AppointmentRepository($pdo), new StatsRepository($pdo), new NotificationRepository($pdo)));
     };
+    $transfer = static function () use ($deps, $changes): TransferApiController {
+        [$pdo, $guard, $perms] = $deps();
+        $audit = new AuditLogger($pdo);
+        $appts = new AppointmentRepository($pdo);
+        $contacts = new ContactRepository($pdo);
+        return new TransferApiController($guard, new ExportService($pdo, $perms, $appts, $contacts),
+            new ImportService($pdo, $perms, new AppointmentService($appts, $perms, $audit), $contacts, new CategoryRepository($pdo), $changes(), $audit), $audit);
+    };
+    $r->add('GET', '/api/v1/export/appointments', static fn (Request $q) => $transfer()->exportAppointments($q));
+    $r->add('GET', '/api/v1/export/contacts', static fn (Request $q) => $transfer()->exportContacts($q));
+    $r->add('POST', '/api/v1/import/appointments', static fn (Request $q) => $transfer()->importAppointments($q));
+    $r->add('POST', '/api/v1/import/contacts', static fn (Request $q) => $transfer()->importContacts($q));
     $r->add('GET', '/api/v1/dashboard', static fn (Request $q) => $dash()->show($q));
     $r->add('GET', '/api/v1/push/config', static fn (Request $q) => $push()->config($q));
     $r->add('POST', '/api/v1/push/subscribe', static fn (Request $q) => $push()->subscribe($q));

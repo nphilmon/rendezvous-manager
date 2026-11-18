@@ -25,8 +25,9 @@ final class Navigation
             'categories'   => ['label' => 'Catégories', 'href' => '/categories', 'icon' => 'tag', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'data'],
             'calendars'    => ['label' => 'Calendriers', 'href' => '/calendars', 'icon' => 'layers', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'data'],
             'notifications' => ['label' => 'Notifications', 'href' => '/notifications', 'icon' => 'bell', 'perm' => null, 'phase' => null, 'group' => 'data'],
+            'transfer'     => ['label' => 'Import / export', 'href' => '/import-export', 'icon' => 'download', 'perm' => 'data.export', 'phase' => null, 'group' => 'data'],
             'history'      => ['label' => 'Historique', 'href' => '/history', 'icon' => 'history', 'perm' => 'appointments.read', 'phase' => 17, 'group' => 'data'],
-            'reports'      => ['label' => 'Rapports', 'href' => '/reports', 'icon' => 'chart', 'perm' => 'reports.view', 'phase' => 14, 'group' => 'admin'],
+            'reports'      => ['label' => 'Rapports', 'href' => '/reports', 'icon' => 'chart', 'perm' => 'reports.view', 'phase' => 17, 'group' => 'admin'],
             'users'        => ['label' => 'Utilisateurs', 'href' => '/users', 'icon' => 'users', 'perm' => 'users.manage', 'phase' => 16, 'group' => 'admin'],
             'settings'     => ['label' => 'Paramètres', 'href' => '/settings', 'icon' => 'cog', 'perm' => null, 'phase' => null, 'group' => 'admin'],
         ];

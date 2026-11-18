@@ -121,7 +121,7 @@ final class ContactApiController
      * @param array<string,mixed> $in @param array<string,mixed>|null $existing champs omis conservés à la modification
      * @return array<string,mixed>
      */
-    private static function validate(array $in, ?array $existing = null): array
+    public static function validate(array $in, ?array $existing = null): array
     {
         if ($existing !== null) {
             $in += array_intersect_key($existing, array_flip(['last_name', 'first_name', 'company', 'phone', 'email', 'address', 'notes']));
