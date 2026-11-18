@@ -45,6 +45,52 @@
   }
   function changed() { document.dispatchEvent(new CustomEvent('rvm:appointments-changed')); }
 
+  // ---- Séries récurrentes : portée d'une modification ---------------------------------------------------------------------------
+  var scopeDlg = null;
+  /** Demande « cet événement / cet événement et les suivants / tous » ; résout 'single' | 'following' | 'all' ou null (annulé). */
+  function askScope(title, opts) {
+    opts = opts || {};
+    return new Promise(function (resolve) {
+      if (!scopeDlg) { scopeDlg = el('dialog', 'scope-dialog'); document.body.appendChild(scopeDlg); }
+      var d = scopeDlg, choice = null; d.textContent = '';
+      var f = el('form', 'scope-form'); f.method = 'dialog';
+      var h = el('h2', '', title); h.id = 'scope-title'; d.setAttribute('aria-labelledby', 'scope-title');
+      var fs = el('fieldset'), lg = el('legend', 'sr-only', 'Portée'); fs.appendChild(lg);
+      [['single', 'Cet événement'], ['following', 'Cet événement et les suivants'], ['all', 'Tous les événements']].forEach(function (o, i) {
+        if (opts.exclude && opts.exclude.indexOf(o[0]) >= 0) return;
+        var l = el('label', 'radio'), r = input('radio', { name: 'scope', value: o[0] }); if (i === 0 || (opts.exclude && !fs.querySelector('input'))) r.checked = true;
+        l.append(r, document.createTextNode(' ' + o[1])); fs.appendChild(l);
+      });
+      var bar = el('div', 'af-actions'), ok = el('button', 'btn btn-primary', 'OK'), no = el('button', 'btn', 'Annuler'); ok.type = 'submit'; no.type = 'button';
+      no.addEventListener('click', function () { d.close(); });
+      bar.append(ok, no); f.append(h, fs, bar); d.appendChild(f);
+      f.addEventListener('submit', function (e) { e.preventDefault(); var c = f.querySelector('input:checked'); choice = c ? c.value : null; d.close(); });
+      d.addEventListener('close', function onClose() { d.removeEventListener('close', onClose); resolve(choice); });
+      if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+      var first = f.querySelector('input:checked'); if (first) first.focus();
+    });
+  }
+  /** Corps de requête pour une série (portée + début d'origine) ; inchangé pour un rendez-vous simple. */
+  function seriesBody(raw, scope, extra) {
+    var b = Object.assign({ version: raw.version }, extra || {});
+    if (raw.recurring) { b.scope = scope; b.occurrence = raw.occurrence_start || raw.start; }
+    return b;
+  }
+  var DOW = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'], CODES = { MO: 'lundi', TU: 'mardi', WE: 'mercredi', TH: 'jeudi', FR: 'vendredi', SA: 'samedi', SU: 'dimanche' };
+  var UNIT = { daily: ['jour', 'jours'], weekly: ['semaine', 'semaines'], monthly: ['mois', 'mois'], yearly: ['an', 'ans'] };
+  function describeRule(rec) {
+    if (!rec) return '';
+    var n = rec.interval || 1, u = UNIT[rec.freq] || ['', ''], t = n === 1 ? ({ daily: 'Tous les jours', weekly: 'Toutes les semaines', monthly: 'Tous les mois', yearly: 'Tous les ans' }[rec.freq]) : 'Tous les ' + n + ' ' + u[1];
+    if (rec.freq === 'weekly' && n > 1) t = 'Toutes les ' + n + ' semaines';
+    var days = (rec.byday || []).map(function (d) { var m = /^([+-]?\d+)?(MO|TU|WE|TH|FR|SA|SU)$/.exec(d), nth = m[1] ? (+m[1] === -1 ? 'dernier ' : m[1] + 'ᵉ ') : ''; return nth + CODES[m[2]]; });
+    if (days.length) t += ' (' + days.join(', ') + ')';
+    if (rec.bymonthday && rec.bymonthday.length) t += ' le ' + rec.bymonthday.join(', ');
+    var e = rec.end || {};
+    if (e.type === 'count') t += ', ' + e.count + ' fois';
+    if (e.type === 'until') t += ', jusqu\'au ' + fmt({ day: 'numeric', month: 'long', year: 'numeric' }, 'UTC').format(Date.parse(e.until + 'T00:00:00Z'));
+    return t;
+  }
+
   // ---- Données de référence (mises en cache) ------------------------------------------------------------------------
   var cache = {};
   function ref(name, path) {
@@ -87,7 +133,12 @@
     row('Quand', describeTime(raw)); row('Statut', STATUS[raw.status] || raw.status); row('Priorité', PRIORITY[raw.priority] || raw.priority);
     row('Calendrier', cal ? cal.name : ''); row('Catégorie', raw.category && raw.category.name); row('Contact', raw.contact);
     row('Lieu', raw.location); row('Adresse', raw.address);
-    if (raw.recurring) row('Récurrence', 'Série récurrente (occurrences non encore dépliées)');
+    if (raw.recurring) {
+      dl.appendChild(el('dt', '', 'Répétition')); var rd = el('dd', '', 'Série récurrente'); dl.appendChild(rd);
+      api('GET', '/api/v1/appointments/' + raw.id + '?occurrence=' + encodeURIComponent(raw.occurrence_start || raw.start)).then(function (r) {
+        if (r.ok && r.data.data.recurrence) rd.textContent = describeRule(r.data.data.recurrence);
+      });
+    }
     if (raw.deleted) row('État', 'Dans la corbeille');
     dlg.appendChild(dl);
     if (raw.description) dlg.appendChild(el('p', 'desc', raw.description));
@@ -117,41 +168,62 @@
     return { start: isoUtc(unwall(wall(Date.parse(raw.start)) + days * DAY)), end: isoUtc(unwall(wall(Date.parse(raw.end)) + days * DAY)) };
   }
 
+  /** Pour une série : demande la portée (null = abandon) ; pour un rendez-vous simple : 'all' sans question. */
+  function scopeFor(raw, title, opts) { return raw.recurring ? askScope(title, opts) : Promise.resolve('all'); }
+
   function actions(raw, cal, done) {
-    var box = el('div', 'dlg-actions'), can = (cal && cal.can) || {};
+    var box = el('div', 'dlg-actions'), can = (cal && cal.can) || {}, base = '/api/v1/appointments/' + raw.id;
     function btn(text, cls, fn) {
       var b = el('button', 'btn ' + (cls || ''), text); b.type = 'button';
       b.addEventListener('click', function () { b.disabled = true; Promise.resolve(fn()).then(function () { b.disabled = false; }); });
       box.appendChild(b); return b;
     }
     if (raw.deleted) {
-      if (can.delete) btn('Restaurer', 'btn-primary', function () { return call('Restauration', 'POST', '/api/v1/appointments/' + raw.id + '/restore', undefined, 'Rendez-vous restauré.').then(done); });
+      if (can.delete) btn('Restaurer', 'btn-primary', function () { return call('Restauration', 'POST', base + '/restore', undefined, 'Rendez-vous restauré.').then(done); });
       return box;
     }
-    if (can.update) btn('Modifier', 'btn-primary', function () { done(); openForm({ id: raw.id }); return Promise.resolve(); });
-    if (can.create) btn('Dupliquer', '', function () { return call('Duplication', 'POST', '/api/v1/appointments/' + raw.id + '/duplicate', undefined, 'Rendez-vous dupliqué.').then(done); });
+    if (can.update) btn('Modifier', 'btn-primary', function () { done(); openForm({ id: raw.id, occurrence: raw.recurring ? (raw.occurrence_start || raw.start) : undefined }); return Promise.resolve(); });
+    if (can.create) btn('Dupliquer', '', function () {
+      return call('Duplication', 'POST', base + '/duplicate', raw.recurring ? { occurrence: raw.occurrence_start || raw.start } : undefined, 'Rendez-vous dupliqué.').then(done);
+    });
     if (can.update) {
       [[1, 'Reporter de 1 jour'], [7, 'Reporter de 1 semaine']].forEach(function (p) {
         btn(p[1], '', function () {
-          var t = shiftIso(raw, p[0]), body = { version: raw.version, start: t.start, end: t.end };
-          return api('POST', '/api/v1/appointments/' + raw.id + '/reschedule', body).then(function (r) {
-            var d = r.data && r.data.error && r.data.error.details;
-            if (r.status === 409 && d && d.code === 'time_conflict' && window.confirm('Conflit horaire avec « ' + d.conflicts[0].title + ' ». Reporter quand même ?')) {
-              body.ignore_conflicts = true;
-              return call('Report', 'POST', '/api/v1/appointments/' + raw.id + '/reschedule', body, 'Rendez-vous reporté.').then(done);
-            }
-            if (r.ok) { toast('Rendez-vous reporté.'); changed(); done(); } else { toast(errorMessage(r, 'Report impossible.'), true); if (r.status === 409) changed(); }
+          return scopeFor(raw, p[1]).then(function (scope) {
+            if (!scope) return;
+            var t = shiftIso(raw, p[0]), body = seriesBody(raw, scope, { start: t.start, end: t.end });
+            return api('POST', base + '/reschedule', body).then(function (r) {
+              var d = r.data && r.data.error && r.data.error.details;
+              if (r.status === 409 && d && d.code === 'time_conflict' && window.confirm('Conflit horaire avec « ' + d.conflicts[0].title + ' ». Reporter quand même ?')) {
+                body.ignore_conflicts = true;
+                return call('Report', 'POST', base + '/reschedule', body, 'Rendez-vous reporté.').then(done);
+              }
+              if (r.ok) { toast('Rendez-vous reporté.'); changed(); done(); } else { toast(errorMessage(r, 'Report impossible.'), true); if (r.status === 409) changed(); }
+            });
           });
         });
       });
-      if (raw.status !== 'cancelled') btn('Annuler le rendez-vous', '', function () { return call('Annulation', 'POST', '/api/v1/appointments/' + raw.id + '/cancel', { version: raw.version }, 'Rendez-vous annulé.').then(done); });
-      if (raw.status !== 'completed') btn('Marquer comme terminé', '', function () { return call('Opération', 'POST', '/api/v1/appointments/' + raw.id + '/complete', { version: raw.version }, 'Rendez-vous terminé.').then(done); });
+      if (raw.status !== 'cancelled') btn('Annuler le rendez-vous', '', function () {
+        return scopeFor(raw, 'Annuler').then(function (scope) { return scope && call('Annulation', 'POST', base + '/cancel', seriesBody(raw, scope), 'Rendez-vous annulé.').then(done); });
+      });
+      if (raw.status !== 'completed') btn('Marquer comme terminé', '', function () {
+        return scopeFor(raw, 'Marquer comme terminé').then(function (scope) { return scope && call('Opération', 'POST', base + '/complete', seriesBody(raw, scope), 'Rendez-vous terminé.').then(done); });
+      });
     }
-    if (can.delete) btn('Supprimer', 'btn-danger', function () {
-      if (!window.confirm('Supprimer « ' + raw.title + ' » ? Il pourra être restauré depuis la corbeille.')) return Promise.resolve();
-      return call('Suppression', 'DELETE', '/api/v1/appointments/' + raw.id, { version: raw.version }, 'Rendez-vous supprimé (restaurable depuis la corbeille).').then(done);
-    });
+    if (can.delete) btn('Supprimer', 'btn-danger', function () { return deleteWithScope(raw).then(function (ok) { if (ok) done(); }); });
     return box;
+  }
+
+  /** Suppression (avec choix de portée pour une série) ; résout true si effectuée. */
+  function deleteWithScope(raw) {
+    var go = raw.recurring ? askScope('Supprimer') : Promise.resolve(window.confirm('Supprimer « ' + raw.title + ' » ? Il pourra être restauré depuis la corbeille.') ? 'all' : null);
+    return go.then(function (scope) {
+      if (!scope) return false;
+      return api('DELETE', '/api/v1/appointments/' + raw.id, seriesBody(raw, scope)).then(function (r) {
+        if (r.ok) { toast(scope === 'all' ? 'Rendez-vous supprimé (restaurable depuis la corbeille).' : 'Suppression effectuée.'); changed(); return true; }
+        toast(errorMessage(r, 'Suppression impossible.'), true); if (r.status === 409) changed(); return false;
+      });
+    });
   }
 
   // ---- Formulaire ---------------------------------------------------------------------------------------------------
@@ -186,13 +258,20 @@
     opts = opts || {};
     if (!formDlg) buildForm();
     formOpener = document.activeElement;
-    Promise.all([calendars(), categories(), contacts(), opts.id ? api('GET', '/api/v1/appointments/' + opts.id) : Promise.resolve(null)]).then(function (res) {
+    var q = opts.id && opts.occurrence ? '?occurrence=' + encodeURIComponent(opts.occurrence) : '';
+    Promise.all([calendars(), categories(), contacts(), opts.id ? api('GET', '/api/v1/appointments/' + opts.id + q) : Promise.resolve(null)]).then(function (res) {
       var cals = res[0], cats = res[1], cons = res[2], r = res[3];
       if (r && !r.ok) { toast(errorMessage(r, 'Rendez-vous introuvable.'), true); changed(); return; }
       var existing = r ? r.data.data : null;
+      if (existing && existing.recurring && !opts.scope) {
+        return askScope('Modifier').then(function (scope) { if (scope) { opts.scope = scope; proceed(); } });
+      }
+      proceed();
+      function proceed() {
       var writable = cals.filter(function (c) { return existing ? (c.can.update || c.id === existing.calendar_id) : c.can.create; });
       if (!writable.length) { toast('Vous n\'avez accès en création à aucun calendrier.', true); return; }
       render(existing, opts, writable, cats, cons);
+      }
     });
   }
 
@@ -207,9 +286,11 @@
       sW = base; eW = opts.end !== undefined ? opts.end : base + 3600000;
       if (allDay) { sW = Math.floor(sW / DAY) * DAY; eW = sW; }
     }
-    state = { id: a ? a.id : null, version: a ? a.version : null, duration: Math.max(eW - sW, 15 * 60000), allDay: allDay };
+    state = { id: a ? a.id : null, version: a ? a.version : null, duration: Math.max(eW - sW, 15 * 60000), allDay: allDay,
+      series: !!(a && a.recurring), scope: a && a.recurring ? opts.scope : null, occurrence: a && a.recurring ? (a.occurrence_start || a.start) : null, raw: a };
 
-    var head = el('div', 'dlg-head'), h = el('h2', '', edit ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous'); h.id = 'af-title';
+    var scopeLabel = { single: ' (cet événement)', following: ' (cet événement et les suivants)', all: ' (tous les événements)' }[state.scope] || '';
+    var head = el('div', 'dlg-head'), h = el('h2', '', (edit ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous') + scopeLabel); h.id = 'af-title';
     var x = el('button', 'icon-btn', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer'); x.addEventListener('click', function () { formDlg.close(); });
     head.append(h, x); form.appendChild(head);
     var summary = el('div', 'alert alert-error'); summary.id = 'af-summary'; summary.setAttribute('role', 'alert'); summary.hidden = true; form.appendChild(summary);
@@ -238,6 +319,16 @@
     [sd, st].forEach(function (c) { c.addEventListener('change', shiftEnd); });
     [ed, et].forEach(function (c) { c.addEventListener('change', function () { var d = recompute(); if (d > 0 || (ad.checked && d >= 0)) state.duration = d; }); });
 
+        // ---- Répétition (masquée pour « cet événement » seul) ----
+    var rep = null;
+    if (state.scope !== 'single') {
+      rep = buildRepeat(a && a.recurrence ? a.recurrence : null, sd, state.series ? state.scope : null);
+      form.appendChild(rep.node);
+    }
+    if (state.series && state.scope === 'all') {
+      form.appendChild(el('p', 'muted small', 'Pour « tous les événements », seuls l\'horaire et la durée s\'appliquent aux autres occurrences ; la date de début de la série ne change pas.'));
+    }
+
     var cal = select(cals.map(function (c) { return [c.id, c.name]; }), a ? a.calendar_id : (opts.calendarId || lastCalendar(cals)));
     form.appendChild(field('Calendrier', cal, 'af-cal'));
     var cat = select([[null, 'Aucune']].concat(cats.map(function (c) { return [c.id, c.name]; })), a && a.category ? a.category.id : null);
@@ -263,24 +354,117 @@
     if (!edit) btn('Enregistrer et nouveau', '', 'button', function () { save('new'); });
     if (edit && cals.some(function (c) { return c.id === a.calendar_id && c.can.delete; }) && a.can && a.can.delete) {
       var del = btn('Supprimer', 'btn-danger', 'button', function () {
-        if (!window.confirm('Supprimer « ' + a.title + ' » ? Il pourra être restauré depuis la corbeille.')) return;
-        api('DELETE', '/api/v1/appointments/' + a.id, { version: state.version }).then(function (r) {
-          if (r.ok) { toast('Rendez-vous supprimé (restaurable depuis la corbeille).'); changed(); formDlg.close(); }
-          else showError(r);
-        });
+        deleteWithScope(Object.assign({}, a, { version: state.version })).then(function (ok) { if (ok) formDlg.close(); });
       });
       del.style.marginRight = 'auto';
     }
     btn('Annuler', '', 'button', function () { formDlg.close(); });
     form.appendChild(bar);
 
+    state.rep = rep;
     state.ctl = { title: title, desc: desc, ad: ad, sd: sd, st: st, ed: ed, et: et, cal: cal, cat: cat, con: con, loc: loc, adr: adr, stat: stat, prio: prio, color: color, rem: rem, notes: notes };
-    state.fields = { title: title, description: desc, start: sd, end: ed, calendar_id: cal, category_id: cat, contact_id: con, location: loc, address: adr,
+    state.fields = { recurrence: rep ? rep.focusEl : null, title: title, description: desc, start: sd, end: ed, calendar_id: cal, category_id: cat, contact_id: con, location: loc, address: adr,
       status: stat, priority: prio, color: color, reminder_minutes: rem, notes: notes };
     state.edit = edit;
     if (formDlg.showModal && !formDlg.open) formDlg.showModal(); else formDlg.setAttribute('open', '');
     title.focus();
   }
+
+  /** Section « Répétition » : préréglages + personnalisation + fin. value() : objet, null (aucune), undefined (inchangé) ou false (invalide). */
+  function buildRepeat(existing, startDate, scope) {
+    var node = el('fieldset', 'repeat'), lg = el('legend', '', 'Répétition'); node.appendChild(lg);
+    function wd() { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(startDate.value); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : new Date(); }
+    function code() { return ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'][wd().getUTCDay()]; }
+    var sel = el('select'); sel.id = 'af-rep'; sel.setAttribute('aria-label', 'Répétition');
+    var presets = [['none', 'Ne se répète pas'], ['daily', 'Tous les jours'], ['weekly', 'Toutes les semaines'], ['monthly', 'Tous les mois'], ['yearly', 'Tous les ans'], ['weekdays', 'Du lundi au vendredi'], ['custom', 'Personnalisée…']];
+    presets.forEach(function (o) { if (o[0] === 'none' && scope && scope !== 'all') return; var op = el('option', '', o[1]); op.value = o[0]; sel.appendChild(op); });
+    node.appendChild(sel);
+
+    var custom = el('div', 'rep-custom'); custom.hidden = true;
+    var every = el('div', 'rep-line'), nIn = input('number', { min: 1, max: 999, value: 1, 'aria-label': 'Intervalle' }), fSel = el('select'); fSel.setAttribute('aria-label', 'Unité');
+    [['daily', 'jours'], ['weekly', 'semaines'], ['monthly', 'mois'], ['yearly', 'ans']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; fSel.appendChild(op); });
+    every.append(document.createTextNode('Tous les '), nIn, fSel);
+    var days = el('div', 'rep-days'), dayBoxes = {};
+    [['MO', 'L'], ['TU', 'M'], ['WE', 'M'], ['TH', 'J'], ['FR', 'V'], ['SA', 'S'], ['SU', 'D']].forEach(function (d) {
+      var l = el('label', 'day'), c = input('checkbox'); c.value = d[0]; l.setAttribute('title', CODES[d[0]]); l.append(c, document.createTextNode(d[1])); dayBoxes[d[0]] = c; days.appendChild(l);
+    });
+    var monthly = el('div', 'rep-month'), mDay = el('label', 'radio'), mNth = el('label', 'radio'), r1 = input('radio', { name: 'af-month' }), r2 = input('radio', { name: 'af-month' }), nthText = document.createTextNode('');
+    r1.value = 'day'; r2.value = 'nth'; r1.checked = true; var dayText = document.createTextNode('');
+    mDay.append(r1, dayText); mNth.append(r2, nthText); monthly.append(mDay, mNth);
+    custom.append(every, days, monthly);
+    node.appendChild(custom);
+
+    var end = el('div', 'rep-end'), eSel = el('select'); eSel.setAttribute('aria-label', 'Fin de la répétition');
+    [['never', 'Jamais'], ['until', 'Jusqu\'au'], ['count', 'Après un nombre d\'occurrences']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; eSel.appendChild(op); });
+    var untilIn = input('date', { 'aria-label': 'Date de fin' }), countIn = input('number', { min: 1, max: 5000, value: 10, 'aria-label': 'Nombre d\'occurrences' });
+    end.append(document.createTextNode('Fin : '), eSel, untilIn, countIn); node.appendChild(end);
+    var err = el('p', 'fld-err'); err.id = 'af-rep-err'; err.hidden = true; node.appendChild(err);
+
+    function nth() { var d = wd(), day = d.getUTCDate(), dim = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate(); return day + 7 > dim ? -1 : Math.ceil(day / 7); }
+    function refresh() {
+      var f = fSel.value, isCustom = sel.value === 'custom';
+      custom.hidden = !isCustom; days.hidden = f !== 'weekly'; monthly.hidden = f !== 'monthly';
+      end.hidden = sel.value === 'none'; untilIn.hidden = eSel.value !== 'until'; countIn.hidden = eSel.value !== 'count';
+      var d = wd(), n = nth();
+      dayText.nodeValue = ' Le ' + d.getUTCDate() + ' du mois';
+      nthText.nodeValue = ' Le ' + (n === -1 ? 'dernier' : n + 'ᵉ') + ' ' + DOW[d.getUTCDay()] + ' du mois';
+      if (!untilIn.value) { var u = new Date(d.getTime() + 90 * DAY); untilIn.value = dateStr(u.getTime()); }
+    }
+    [sel, fSel, eSel].forEach(function (c) { c.addEventListener('change', refresh); });
+    startDate.addEventListener('change', refresh);
+
+    // état initial depuis une règle existante
+    if (existing) {
+      var simple = !existing.bymonth.length && existing.interval === 1;
+      if (existing.freq === 'daily' && simple && !existing.byday.length) sel.value = 'daily';
+      else if (existing.freq === 'weekly' && simple && existing.byday.length === 1 && existing.byday[0] === code()) sel.value = 'weekly';
+      else if (existing.freq === 'weekly' && simple && existing.byday.join() === 'MO,TU,WE,TH,FR') sel.value = 'weekdays';
+      else if (existing.freq === 'monthly' && simple && existing.bymonthday.length === 1 && existing.bymonthday[0] === wd().getUTCDate() && !existing.byday.length) sel.value = 'monthly';
+      else if (existing.freq === 'yearly' && simple && !existing.byday.length && !existing.bymonthday.length) sel.value = 'yearly';
+      else {
+        sel.value = 'custom'; fSel.value = existing.freq; nIn.value = existing.interval;
+        existing.byday.forEach(function (d) { if (dayBoxes[d]) dayBoxes[d].checked = true; });
+        if (existing.freq === 'monthly' && existing.byday.length) r2.checked = true;
+      }
+      eSel.value = existing.end.type; if (existing.end.until) untilIn.value = existing.end.until; if (existing.end.count) countIn.value = existing.end.count;
+    } else { sel.value = 'none'; }
+    refresh();
+
+    var api2 = { node: node, focusEl: sel, error: '' };
+    api2.value = function () {
+      err.hidden = true; var v = sel.value;
+      if (v === 'none') return scope === 'all' ? null : undefined; // « aucune » : supprime la récurrence d'une série (portée « tous »)
+      var r;
+      if (v === 'daily') r = { freq: 'daily' };
+      else if (v === 'weekly') r = { freq: 'weekly', byday: [code()] };
+      else if (v === 'weekdays') r = { freq: 'weekly', byday: ['MO', 'TU', 'WE', 'TH', 'FR'] };
+      else if (v === 'monthly') r = { freq: 'monthly', bymonthday: [wd().getUTCDate()] };
+      else if (v === 'yearly') r = { freq: 'yearly' };
+      else {
+        var n = parseInt(nIn.value, 10);
+        if (!(n >= 1 && n <= 999)) { api2.error = 'Intervalle invalide (1 à 999).'; return false; }
+        r = { freq: fSel.value, interval: n };
+        if (fSel.value === 'weekly') { r.byday = Object.keys(dayBoxes).filter(function (k) { return dayBoxes[k].checked; }); if (!r.byday.length) r.byday = [code()]; }
+        if (fSel.value === 'monthly') { if (r2.checked) r.byday = [nth() + CODES_REV[wd().getUTCDay()]]; else r.bymonthday = [wd().getUTCDate()]; }
+      }
+      if (eSel.value === 'until') {
+        if (!untilIn.value || untilIn.value < startDate.value) { api2.error = 'La date de fin doit être postérieure au début.'; return false; }
+        r.end = { type: 'until', until: untilIn.value };
+      } else if (eSel.value === 'count') {
+        var c = parseInt(countIn.value, 10);
+        if (!(c >= 1 && c <= 5000)) { api2.error = 'Nombre d\'occurrences : 1 à 5000.'; return false; }
+        r.end = { type: 'count', count: c };
+      } else r.end = { type: 'never' };
+      if (existing && sameRule(r, existing)) return undefined; // inchangée : le serveur conserve la règle (et adapte COUNT lors d'une coupure)
+      return r;
+    };
+    return api2;
+  }
+  function sameRule(a, b) {
+    var c = function (r) { return JSON.stringify([r.freq, r.interval || 1, (r.byday || []).slice().sort(), r.bymonthday || [], r.bymonth || [], r.end && r.end.type, r.end && r.end.count || null, r.end && r.end.until || null]); };
+    return c(a) === c(b);
+  }
+  var CODES_REV = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
   function lastCalendar(cals) {
     var last = null; try { last = +localStorage.getItem('rvm_last_calendar'); } catch (e) {}
@@ -316,6 +500,12 @@
     if (allDay) { body.start = c.sd.value; body.end = dateStr(e + DAY); } // fin exclusive côté API
     else { body.start = isoUtc(unwall(s)); body.end = isoUtc(unwall(e)); }
     if (state.edit) body.version = state.version;
+    if (state.series) { body.scope = state.scope; body.occurrence = state.occurrence; }
+    if (state.rep) {
+      var rc = state.rep.value();
+      if (rc === false) { showFieldErrors({ recurrence: [state.rep.error] }); return null; }
+      if (rc !== undefined) body.recurrence = rc;
+    }
     return body;
   }
 
@@ -383,7 +573,7 @@
     openForm(Object.assign({ start: start, end: start + 3600000 }, extra || {}));
   }
 
-  window.RVM.appointments = { TZ: TZ, openForm: openForm, openNew: openNew, openDetails: openDetails, calendars: calendars, toast: toast,
+  window.RVM.appointments = { askScope: askScope, seriesBody: seriesBody, describeRule: describeRule, TZ: TZ, openForm: openForm, openNew: openNew, openDetails: openDetails, calendars: calendars, toast: toast,
     time: { wall: wall, unwall: unwall, dateStr: dateStr, timeStr: timeStr, isoUtc: isoUtc } };
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -449,7 +639,7 @@
         var td = el('td'), b = el('button', 'link', a.title); b.type = 'button';
         b.addEventListener('click', function () { openDetails(a, cal, b); });
         var dot = el('span', 'dot'); setColor(dot, a.color || (a.category && a.category.color) || (cal && cal.color));
-        td.append(dot, b); tr.appendChild(td);
+        td.append(dot, b); if (a.recurring) { var rp = el('span', 'rec', ' ↻'); rp.title = 'Série récurrente'; td.appendChild(rp); } tr.appendChild(td);
         tr.appendChild(el('td', '', cal ? cal.name : ''));
         tr.appendChild(el('td', '', STATUS[a.status] || a.status));
         tr.appendChild(el('td', '', PRIORITY[a.priority] || a.priority));

@@ -116,7 +116,8 @@ final class AppointmentApiController
     public function show(Request $req, array $p): Response
     {
         $ctx = $this->guard->requirePermission($req, 'appointments.read');
-        return Response::json(['data' => $this->service->get($ctx['user'], self::id($p))]);
+        $occ = $req->query['occurrence'] ?? null;
+        return Response::json(['data' => $this->service->get($ctx['user'], self::id($p), is_string($occ) ? $occ : null)]);
     }
 
     public function store(Request $req): Response
@@ -147,7 +148,8 @@ final class AppointmentApiController
     public function duplicate(Request $req, array $p): Response
     {
         $ctx = $this->guard->require($req);
-        return Response::json(['data' => $this->service->duplicate($ctx['user'], self::id($p), $req->ip)], 201);
+        $occ = $req->json()['occurrence'] ?? null;
+        return Response::json(['data' => $this->service->duplicate($ctx['user'], self::id($p), $req->ip, is_string($occ) ? $occ : null)], 201);
     }
 
     public function cancel(Request $req, array $p): Response

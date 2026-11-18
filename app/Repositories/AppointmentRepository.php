@@ -4,24 +4,36 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use DateTimeImmutable;
+use App\Services\Recurrence\RRule;
+use App\Services\Recurrence\RecurrenceService;
+use DateTimeZone;
 use PDO;
 
 final class AppointmentRepository
 {
     public const MAX_ROWS = 2000;
 
-    private const SELECT = "SELECT a.id, a.uid, a.calendar_id, a.title, a.description, a.notes, a.start_utc, a.end_utc, a.all_day, a.timezone,
+    private const COLS = "a.id, a.uid, a.calendar_id, a.title, a.description, a.notes, a.all_day, a.timezone,
                        a.location, a.address, a.status, a.priority, a.color, a.version, a.created_by, a.deleted_at, a.completed_at,
                        a.created_at, a.updated_at,
                        cat.id AS category_id, cat.name AS category_name, cat.color AS category_color, a.contact_id,
                        NULLIF(TRIM(CONCAT(IFNULL(ct.first_name, ''), ' ', ct.last_name)), '') AS contact_name,
-                       EXISTS (SELECT 1 FROM appointment_recurrence r WHERE r.appointment_id = a.id) AS recurring
-                FROM appointments a
+                       (r.id IS NOT NULL) AS recurring, r.rrule, r.dtstart_local, r.timezone AS rec_tz";
+
+    private const JOINS = "FROM appointments a
                 LEFT JOIN categories cat ON cat.id = a.category_id
-                LEFT JOIN contacts ct ON ct.id = a.contact_id";
+                LEFT JOIN contacts ct ON ct.id = a.contact_id
+                LEFT JOIN appointment_recurrence r ON r.appointment_id = a.id";
+
+    private static function select(bool $occ = false): string
+    {
+        return 'SELECT ' . self::COLS . ($occ
+            ? ', COALESCE(occ.s, a.start_utc) AS start_utc, COALESCE(occ.e, a.end_utc) AS end_utc, occ.o AS occurrence_start'
+            : ', a.start_utc, a.end_utc, NULL AS occurrence_start') . ' ' . self::JOINS;
+    }
 
     private const SORTS = [
-        'start' => 'a.start_utc', 'title' => 'a.title', 'created' => 'a.created_at', 'status' => 'a.status',
+        'start' => 'COALESCE(occ.s, a.start_utc)', 'title' => 'a.title', 'created' => 'a.created_at', 'status' => 'a.status',
         'priority' => "FIELD(a.priority, 'low', 'normal', 'high', 'urgent')", 'updated' => 'a.updated_at',
     ];
 
@@ -37,13 +49,14 @@ final class AppointmentRepository
     /** @return array<string,mixed>|null */
     public function find(int $id, bool $withDeleted = false): ?array
     {
-        $st = $this->pdo->prepare(self::SELECT . ' WHERE a.id = ?' . ($withDeleted ? '' : ' AND a.deleted_at IS NULL'));
+        $st = $this->pdo->prepare(self::select() . ' WHERE a.id = ?' . ($withDeleted ? '' : ' AND a.deleted_at IS NULL'));
         $st->execute([$id]);
         return $st->fetch() ?: null;
     }
 
     /**
-     * Rendez-vous chevauchant [start, end) pour la grille. Séries récurrentes non dépliées (phase 9).
+     * Rendez-vous chevauchant [start, end) pour la grille. Les séries sont dépliées en occurrences (jamais stockées) ;
+     * chaque occurrence porte occurrence_start (début d'origine, clé d'exception).
      * @param list<int> $calendarIds
      * @return array{rows:list<array<string,mixed>>,truncated:bool}
      */
@@ -53,11 +66,33 @@ final class AppointmentRepository
             return ['rows' => [], 'truncated' => false];
         }
         $in = implode(',', array_fill(0, count($calendarIds), '?'));
-        $st = $this->pdo->prepare(self::SELECT . " WHERE a.deleted_at IS NULL AND a.calendar_id IN ($in) AND a.start_utc < ? AND a.end_utc > ?
+        $s = $start->format('Y-m-d H:i:s');
+        $e = $end->format('Y-m-d H:i:s');
+        $st = $this->pdo->prepare(self::select() . " WHERE a.deleted_at IS NULL AND r.id IS NULL AND a.calendar_id IN ($in) AND a.start_utc < ? AND a.end_utc > ?
                 ORDER BY a.start_utc, a.end_utc, a.id LIMIT " . (self::MAX_ROWS + 1));
-        $st->execute(array_merge($calendarIds, [$end->format('Y-m-d H:i:s'), $start->format('Y-m-d H:i:s')]));
+        $st->execute(array_merge($calendarIds, [$e, $s]));
         $rows = $st->fetchAll();
+
+        $st = $this->pdo->prepare(self::select() . " WHERE a.deleted_at IS NULL AND r.id IS NOT NULL AND a.calendar_id IN ($in) AND (
+                (a.start_utc < ? AND (r.until_utc IS NULL OR DATE_ADD(r.until_utc, INTERVAL TIMESTAMPDIFF(SECOND, a.start_utc, a.end_utc) SECOND) > ?))
+                OR EXISTS (SELECT 1 FROM appointment_exceptions x WHERE x.appointment_id = a.id AND x.exception_type = 'modified' AND x.new_start_utc < ? AND x.new_end_utc > ?))
+                LIMIT 500");
+        $st->execute(array_merge($calendarIds, [$e, $s, $e, $s]));
+        $masters = $st->fetchAll();
+        $exc = $this->exceptionsFor(array_map(fn ($m) => (int) $m['id'], $masters));
+        foreach ($masters as $m) {
+            foreach (RecurrenceService::expand($m, $exc[(int) $m['id']] ?? [], $start, $end, 1000) as $o) {
+                $rows[] = self::occurrenceRow($m, $o);
+            }
+        }
+        usort($rows, fn ($a, $b) => [$a['start_utc'], $a['end_utc'], $a['id']] <=> [$b['start_utc'], $b['end_utc'], $b['id']]);
         return ['rows' => array_slice($rows, 0, self::MAX_ROWS), 'truncated' => count($rows) > self::MAX_ROWS];
+    }
+
+    /** @param array<string,mixed> $master @param array{original:string,start:string,end:string,overrides:array<string,mixed>} $o @return array<string,mixed> */
+    public static function occurrenceRow(array $master, array $o): array
+    {
+        return array_replace($master, $o['overrides'], ['start_utc' => $o['start'], 'end_utc' => $o['end'], 'occurrence_start' => $o['original']]);
     }
 
     /**
@@ -97,24 +132,70 @@ final class AppointmentRepository
             $w[] = '(a.created_by = ? OR a.calendar_id IN (SELECT id FROM calendars WHERE owner_id = ?))';
             array_push($args, (int) $f['mine_user_id'], (int) $f['mine_user_id']);
         }
-        if (!empty($f['from'])) {
-            $w[] = 'a.end_utc > ?';
-            $args[] = $f['from']->format('Y-m-d H:i:s');
+
+        // Avec une période, chaque série est représentée par sa première occurrence dans la période.
+        $timed = !empty($f['from']) || !empty($f['to']);
+        $occ = $timed ? $this->firstOccurrences($w, $args, $f) : [];
+        $occSql = '(SELECT NULL AS id, NULL AS s, NULL AS e, NULL AS o) occ';
+        $occArgs = [];
+        if ($occ) {
+            $parts = [];
+            foreach ($occ as $id => $o) {
+                $parts[] = $parts ? 'SELECT ?, ?, ?, ?' : 'SELECT ? AS id, ? AS s, ? AS e, ? AS o';
+                array_push($occArgs, $id, $o['start'], $o['end'], $o['original']);
+            }
+            $occSql = '(' . implode(' UNION ALL ', $parts) . ') occ';
         }
-        if (!empty($f['to'])) {
-            $w[] = 'a.start_utc < ?';
-            $args[] = $f['to']->format('Y-m-d H:i:s');
+        $timeArgs = [];
+        if ($timed) {
+            $t = [];
+            if (!empty($f['from'])) {
+                $t[] = 'a.end_utc > ?';
+                $timeArgs[] = $f['from']->format('Y-m-d H:i:s');
+            }
+            if (!empty($f['to'])) {
+                $t[] = 'a.start_utc < ?';
+                $timeArgs[] = $f['to']->format('Y-m-d H:i:s');
+            }
+            $w[] = '(occ.id IS NOT NULL OR (r.id IS NULL AND ' . implode(' AND ', $t) . '))';
         }
+        $join = self::JOINS . " LEFT JOIN $occSql ON occ.id = a.id";
         $where = ' WHERE ' . implode(' AND ', $w);
+        $all = array_merge($occArgs, $args, $timeArgs);
         $order = (self::SORTS[$sort] ?? self::SORTS['start']) . ($dir === 'desc' ? ' DESC' : ' ASC') . ', a.id ' . ($dir === 'desc' ? 'DESC' : 'ASC');
 
-        $st = $this->pdo->prepare('SELECT COUNT(*) FROM appointments a' . $where);
-        $st->execute($args);
+        $st = $this->pdo->prepare('SELECT COUNT(*) ' . $join . $where);
+        $st->execute($all);
         $total = (int) $st->fetchColumn();
 
-        $st = $this->pdo->prepare(self::SELECT . $where . " ORDER BY $order LIMIT " . max(1, $perPage) . ' OFFSET ' . max(0, ($page - 1) * $perPage));
-        $st->execute($args);
+        $sql = 'SELECT ' . self::COLS . ', COALESCE(occ.s, a.start_utc) AS start_utc, COALESCE(occ.e, a.end_utc) AS end_utc, occ.o AS occurrence_start ' . $join
+            . $where . " ORDER BY $order LIMIT " . max(1, $perPage) . ' OFFSET ' . max(0, ($page - 1) * $perPage);
+        $st = $this->pdo->prepare($sql);
+        $st->execute($all);
         return ['rows' => $st->fetchAll(), 'total' => $total];
+    }
+
+    /**
+     * Première occurrence (dans la période demandée) de chaque série correspondant aux filtres.
+     * @param list<string> $w @param list<mixed> $args @param array<string,mixed> $f
+     * @return array<int,array{original:string,start:string,end:string,overrides:array<string,mixed>,exception:bool}>
+     */
+    private function firstOccurrences(array $w, array $args, array $f): array
+    {
+        $st = $this->pdo->prepare(self::select() . ' WHERE ' . implode(' AND ', $w) . ' AND r.id IS NOT NULL LIMIT 500');
+        $st->execute($args);
+        $masters = $st->fetchAll();
+        $exc = $this->exceptionsFor(array_map(fn ($m) => (int) $m['id'], $masters));
+        $out = [];
+        foreach ($masters as $m) {
+            $from = $f['from'] ?? new DateTimeImmutable($m['start_utc'], new DateTimeZone('UTC'));
+            $to = $f['to'] ?? $from->modify('+5 years');
+            $o = RecurrenceService::expand($m, $exc[(int) $m['id']] ?? [], $from, $to, 5);
+            if ($o) {
+                $out[(int) $m['id']] = $o[0];
+            }
+        }
+        return $out;
     }
 
     /**
@@ -127,6 +208,7 @@ final class AppointmentRepository
         $st = $this->pdo->prepare(
             "SELECT id, title, start_utc, end_utc FROM appointments
              WHERE calendar_id = ? AND deleted_at IS NULL AND status <> 'cancelled' AND all_day = 0
+               AND NOT EXISTS (SELECT 1 FROM appointment_recurrence r WHERE r.appointment_id = appointments.id)
                AND start_utc < ? AND end_utc > ? AND (? IS NULL OR id <> ?)
              ORDER BY start_utc LIMIT 10"
         );
@@ -200,6 +282,77 @@ final class AppointmentRepository
         }
     }
 
+    // ---- Récurrence et exceptions ------------------------------------------------------------------------------
+
+    /** @return array<string,mixed>|null */
+    public function recurrence(int $id): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM appointment_recurrence WHERE appointment_id = ?');
+        $st->execute([$id]);
+        return $st->fetch() ?: null;
+    }
+
+    /** @param array<string,mixed> $rule règle normalisée (RRule::parse) */
+    public function saveRecurrence(int $id, array $rule, string $dtstartLocal, string $tz): void
+    {
+        $this->pdo->prepare(
+            'INSERT INTO appointment_recurrence (appointment_id, rrule, dtstart_local, timezone, until_utc, occurrence_count)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE rrule = VALUES(rrule), dtstart_local = VALUES(dtstart_local), timezone = VALUES(timezone),
+                                     until_utc = VALUES(until_utc), occurrence_count = VALUES(occurrence_count)'
+        )->execute([$id, RRule::format($rule), $dtstartLocal, $tz, $rule['until'], $rule['count']]);
+    }
+
+    public function deleteRecurrence(int $id): void
+    {
+        $this->pdo->prepare('DELETE FROM appointment_exceptions WHERE appointment_id = ?')->execute([$id]);
+        $this->pdo->prepare('DELETE FROM appointment_recurrence WHERE appointment_id = ?')->execute([$id]);
+    }
+
+    /** @param list<int> $ids @return array<int,array<string,array<string,mixed>>> exceptions par série puis par début d'origine */
+    public function exceptionsFor(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+        $st = $this->pdo->prepare('SELECT * FROM appointment_exceptions WHERE appointment_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')');
+        $st->execute($ids);
+        $out = [];
+        foreach ($st->fetchAll() as $x) {
+            $out[(int) $x['appointment_id']][$x['original_start_utc']] = $x;
+        }
+        return $out;
+    }
+
+    /** @param array<string,mixed>|null $overrides */
+    public function upsertException(int $id, string $original, string $type, ?string $newStart, ?string $newEnd, ?array $overrides): void
+    {
+        $this->pdo->prepare(
+            'INSERT INTO appointment_exceptions (appointment_id, original_start_utc, exception_type, new_start_utc, new_end_utc, overrides)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE exception_type = VALUES(exception_type), new_start_utc = VALUES(new_start_utc),
+                                     new_end_utc = VALUES(new_end_utc), overrides = VALUES(overrides)'
+        )->execute([$id, $original, $type, $newStart, $newEnd, $overrides ? json_encode($overrides, JSON_UNESCAPED_UNICODE) : null]);
+    }
+
+    public function deleteException(int $id, string $original): void
+    {
+        $this->pdo->prepare('DELETE FROM appointment_exceptions WHERE appointment_id = ? AND original_start_utc = ?')->execute([$id, $original]);
+    }
+
+    public function deleteExceptionsFrom(int $id, string $original): void
+    {
+        $this->pdo->prepare('DELETE FROM appointment_exceptions WHERE appointment_id = ? AND original_start_utc >= ?')->execute([$id, $original]);
+    }
+
+    /** Incrémente la version sans autre modification (changement porté par une exception). */
+    public function touch(int $id, int $expectedVersion): bool
+    {
+        $st = $this->pdo->prepare('UPDATE appointments SET version = version + 1, updated_at = ? WHERE id = ? AND version = ? AND deleted_at IS NULL');
+        $st->execute([gmdate('Y-m-d H:i:s'), $id, $expectedVersion]);
+        return $st->rowCount() === 1;
+    }
+
     public function recordChange(?int $calendarId, int $entityId, string $type, int $userId): void
     {
         $this->pdo->prepare('INSERT INTO sync_changes (calendar_id, entity_type, entity_id, change_type, changed_by, created_at) VALUES (?, \'appointment\', ?, ?, ?, ?)')
@@ -223,9 +376,14 @@ final class AppointmentRepository
             'contact_id' => $r['contact_id'] === null ? null : (int) $r['contact_id'],
             'contact' => $r['contact_name'],
             'recurring' => (bool) $r['recurring'],
+            'occurrence_start' => !empty($r['occurrence_start']) ? $iso($r['occurrence_start']) : null,
             'deleted' => $r['deleted_at'] !== null,
         ];
         if ($detail) {
+            if (!empty($r['rrule'])) {
+                $out['rrule'] = $r['rrule'];
+                $out['recurrence'] = RRule::toInput(RRule::parse($r['rrule']), new DateTimeZone($r['all_day'] ? 'UTC' : ($r['rec_tz'] ?: $r['timezone'])));
+            }
             $out += ['notes' => $r['notes'], 'created_by' => (int) $r['created_by'], 'completed_at' => $r['completed_at'] ? $iso($r['completed_at']) : null,
                 'created_at' => $iso($r['created_at']), 'updated_at' => $iso($r['updated_at'])];
         }

@@ -151,7 +151,7 @@
     if (a.all_day) { s = parseIso(a.start); e = Math.max(parseIso(a.end), s + DAY); }
     else { s = wall(Date.parse(a.start)); e = Math.max(wall(Date.parse(a.end)), s); }
     var cal = calById(a.calendar_id);
-    return { raw: a, s: s, e: e, allDay: !!a.all_day, id: a.id, calendar: cal,
+    return { raw: a, s: s, e: e, allDay: !!a.all_day, id: a.id, key: a.id + '@' + (a.occurrence_start || ''), calendar: cal,
       color: a.color || (a.category && a.category.color) || (cal && cal.color) || '#2563eb' };
   }
 
@@ -178,11 +178,11 @@
   }
   function label(ev) {
     return ev.raw.title + ', ' + fmtDay(ev.s, { weekday: 'long', day: 'numeric', month: 'long' }) + ', ' + timeRange(ev) +
-      (ev.calendar ? ', ' + ev.calendar.name : '') + (ev.raw.status === 'cancelled' ? ', annulé' : '');
+      (ev.calendar ? ', ' + ev.calendar.name : '') + (ev.raw.status === 'cancelled' ? ', annulé' : '') + (ev.raw.recurring ? ', série récurrente' : '');
   }
   function eventButton(ev, cls) {
     var b = el('button', 'ev ' + cls + (ev.raw.status === 'cancelled' ? ' cancelled' : '') + (ev.raw.status === 'tentative' ? ' tentative' : ''));
-    b.type = 'button'; setColor(b, ev.color); b.setAttribute('aria-label', label(ev));
+    b.type = 'button'; setColor(b, ev.color); b.setAttribute('aria-label', label(ev)); b.dataset.recurring = ev.raw.recurring ? '1' : '0';
     b.addEventListener('click', function () { window.RVM.appointments.openDetails(ev.raw, ev.calendar, b); });
     return b;
   }
@@ -226,7 +226,7 @@
       var cell = el('div', 'allday-cell' + (d === t0 ? ' today' : '')); cell.dataset.day = d;
       cell.addEventListener('click', function (e) { if (canCreate() && !e.target.closest('.ev')) openCreate(d, d, true); });
       vis.filter(function (ev) { return ev.allDay && ev.s < d + DAY && ev.e > d; }).forEach(function (ev) {
-        shownIds[ev.id] = 1; var chip = cell.appendChild(eventButton(ev, 'chip')); chip.appendChild(el('span', 't', ev.raw.title));
+        shownIds[ev.key] = 1; var chip = cell.appendChild(eventButton(ev, 'chip')); chip.appendChild(el('span', 't', ev.raw.title));
         if (editable(ev)) makeDayDraggable(chip, ev, d);
       });
       allday.appendChild(cell);
@@ -248,7 +248,7 @@
         var s = (seg[0] - d) / 60000, e = (seg[1] - d) / 60000, lo = settings.startHour * 60, hi = settings.endHour * 60;
         if (e < lo || s >= hi || (e === s && (s < lo || s >= hi))) return; // hors plage
         items.push({ ev: ev, s: Math.max(s, lo), e: Math.min(Math.max(e, s + 15), hi) });
-        shownIds[ev.id] = 1;
+        shownIds[ev.key] = 1;
       });
       layoutColumns(items);
       items.forEach(function (it) {
@@ -264,7 +264,7 @@
       body.appendChild(col);
     });
     tg.appendChild(body); scroll.appendChild(tg); box.appendChild(scroll);
-    vis.forEach(function (ev) { if (!shownIds[ev.id] && range().s < ev.e && ev.s < range().e) hiddenCount++; });
+    vis.forEach(function (ev) { if (!shownIds[ev.key] && range().s < ev.e && ev.s < range().e) hiddenCount++; });
     // Position de défilement : conserver, sinon 8 h ou l'heure courante
     var firstHour = Math.max(settings.startHour, 8);
     if (days.indexOf(t0) >= 0) { var nowMin = (wall(Date.now()) - t0) / 60000; firstHour = Math.max(settings.startHour, Math.floor(nowMin / 60) - 1); }
@@ -313,7 +313,7 @@
       var list = vis.filter(function (ev) { return ev.s < d + DAY && (ev.e > d || (ev.s === ev.e && ev.s >= d)); })
         .sort(function (a, b) { return (b.allDay - a.allDay) || (a.s - b.s); });
       list.slice(0, MAX).forEach(function (ev) {
-        shown[ev.id] = 1;
+        shown[ev.key] = 1;
         var b = eventButton(ev, ev.allDay ? 'chip' : 'line');
         if (!ev.allDay) b.appendChild(el('span', 'dot'));
         if (!ev.allDay) b.appendChild(el('span', 'tm', fmtTime(ev.s)));
@@ -323,11 +323,11 @@
       if (list.length > MAX) {
         var more = el('a', 'more', '+ ' + (list.length - MAX) + ' autre' + (list.length - MAX > 1 ? 's' : ''));
         more.href = '/calendar?view=day&date=' + isoDate(d); more.addEventListener('click', function (e) { e.preventDefault(); go('day', d); });
-        list.slice(MAX).forEach(function (ev) { shown[ev.id] = 1; }); cell.appendChild(more);
+        list.slice(MAX).forEach(function (ev) { shown[ev.key] = 1; }); cell.appendChild(more);
       }
       grid.appendChild(cell);
     });
-    vis.forEach(function (ev) { if (!shown[ev.id]) hiddenCount++; });
+    vis.forEach(function (ev) { if (!shown[ev.key]) hiddenCount++; });
     wrap.appendChild(grid); box.appendChild(wrap); return hiddenCount;
   }
 
@@ -356,19 +356,23 @@
   // ---- Déplacement et redimensionnement (souris, appui long au toucher, clavier) ----------------------------------------------
   // Les séries récurrentes ne sont pas modifiables ici (phase 9). Chaque changement passe par l'API « reschedule » (verrou optimiste).
   var dragging = false;
-  function editable(ev) { return !!(ev.calendar && ev.calendar.can && ev.calendar.can.update && !ev.raw.recurring); }
+  function editable(ev) { return !!(ev.calendar && ev.calendar.can && ev.calendar.can.update); }
   function iso19(ms) { return new Date(ms).toISOString().slice(0, 19) + 'Z'; }
   function say(msg, err) { window.RVM.appointments.toast(msg, err); }
 
   /** Envoie le nouvel horaire (heure murale). En cas de conflit horaire, demande confirmation puis réessaie. */
-  function commit(ev, s, e, okMsg, force) {
+  function commit(ev, s, e, okMsg, force, scope) {
+    if (ev.raw.recurring && !scope) { // série : portée de la modification demandée avant l'envoi
+      return window.RVM.appointments.askScope('Modifier').then(function (sc) { if (!sc) { refresh(); return; } return commit(ev, s, e, okMsg, force, sc); });
+    }
     var body = { version: ev.raw.version, start: ev.allDay ? isoDate(s) : iso19(unwall(s)), end: ev.allDay ? isoDate(e) : iso19(unwall(e)) };
+    if (ev.raw.recurring) { body.scope = scope; body.occurrence = ev.raw.occurrence_start || ev.raw.start; }
     if (force) body.ignore_conflicts = true;
     return window.RVM.api('POST', '/api/v1/appointments/' + ev.id + '/reschedule', body).then(function (r) {
       if (r.ok) { say(okMsg); refresh(); return; }
       var d = r.data && r.data.error && r.data.error.details;
       if (r.status === 409 && d && d.code === 'time_conflict' && !force &&
-          window.confirm('Conflit horaire avec « ' + d.conflicts[0].title + ' ». Enregistrer quand même ?')) return commit(ev, s, e, okMsg, true);
+          window.confirm('Conflit horaire avec « ' + d.conflicts[0].title + ' ». Enregistrer quand même ?')) return commit(ev, s, e, okMsg, true, scope);
       var m = r.data && r.data.error ? r.data.error.message : 'Modification impossible.';
       if (d && d.code === 'version_conflict') m = 'Ce rendez-vous a été modifié entre-temps : affichage rechargé.';
       say(m, true); refresh();
@@ -378,7 +382,11 @@
   document.addEventListener('touchmove', function (e) { if (dragging) e.preventDefault(); }, { passive: false });
   /** Après un glisser, le navigateur envoie un « click » à l'ancêtre commun (colonne, cellule…) : on l'ignore. */
   function suppressClick() {
-    var h = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
+    var h = function (e) {
+      document.removeEventListener('click', h, true); // une seule fois : ne jamais avaler un vrai clic ultérieur
+      if (e.target && e.target.closest && e.target.closest('dialog')) return;
+      e.stopImmediatePropagation(); e.preventDefault();
+    };
     document.addEventListener('click', h, true); setTimeout(function () { document.removeEventListener('click', h, true); }, 80);
   }
 

@@ -94,3 +94,4 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none}
 .drop-target{outline:2px solid var(--brand);outline-offset:-2px;background:var(--brand-soft)}
 @media(pointer:coarse){.ev.blk .rs{height:14px}}
 .ev.editable{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.ev[data-recurring="1"] .tt::after{content:" ↻";opacity:.8;font-weight:400}
