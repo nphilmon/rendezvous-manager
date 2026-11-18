@@ -17,10 +17,10 @@ final class Navigation
         return [
             'dashboard'    => ['label' => 'Tableau de bord', 'href' => '/', 'icon' => 'home', 'perm' => null, 'phase' => null, 'group' => 'main'],
             'calendar'     => ['label' => 'Calendrier', 'href' => '/calendar', 'icon' => 'calendar', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'main'],
-            'mine'         => ['label' => 'Mes rendez-vous', 'href' => '/appointments/mine', 'icon' => 'user', 'perm' => 'appointments.read', 'phase' => 7, 'group' => 'appointments'],
-            'all'          => ['label' => 'Tous les rendez-vous', 'href' => '/appointments', 'icon' => 'list', 'perm' => 'appointments.read', 'phase' => 7, 'group' => 'appointments'],
-            'today'        => ['label' => 'Aujourd\'hui', 'href' => '/appointments/today', 'icon' => 'sun', 'perm' => 'appointments.read', 'phase' => 7, 'group' => 'appointments'],
-            'upcoming'     => ['label' => 'À venir', 'href' => '/appointments/upcoming', 'icon' => 'clock', 'perm' => 'appointments.read', 'phase' => 7, 'group' => 'appointments'],
+            'mine'         => ['label' => 'Mes rendez-vous', 'href' => '/appointments/mine', 'icon' => 'user', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'appointments'],
+            'all'          => ['label' => 'Tous les rendez-vous', 'href' => '/appointments', 'icon' => 'list', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'appointments'],
+            'today'        => ['label' => 'Aujourd\'hui', 'href' => '/appointments/today', 'icon' => 'sun', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'appointments'],
+            'upcoming'     => ['label' => 'À venir', 'href' => '/appointments/upcoming', 'icon' => 'clock', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'appointments'],
             'contacts'     => ['label' => 'Contacts', 'href' => '/contacts', 'icon' => 'book', 'perm' => 'contacts.read', 'phase' => 10, 'group' => 'data'],
             'categories'   => ['label' => 'Catégories', 'href' => '/categories', 'icon' => 'tag', 'perm' => 'appointments.read', 'phase' => 10, 'group' => 'data'],
             'notifications' => ['label' => 'Notifications', 'href' => '/notifications', 'icon' => 'bell', 'perm' => null, 'phase' => 12, 'group' => 'data'],
@@ -35,11 +35,5 @@ final class Navigation
     public static function visibleTo(AuthUser $u): array
     {
         return array_filter(self::items(), static fn ($i) => $i['perm'] === null || $u->can($i['perm']));
-    }
-
-    /** Pages supplémentaires qui relèvent d'un module non encore livré. */
-    public static function extraModules(): array
-    {
-        return ['/appointments/new' => ['title' => 'Nouveau rendez-vous', 'phase' => 7, 'perm' => 'appointments.write', 'nav' => 'all']];
     }
 }

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <meta name="csrf-token" content="<?= $e($csrf) ?>">
+<meta name="user-tz" content="<?= $e($tz) ?>">
 <title><?= $e($title) ?> – <?= $e($appName) ?></title>
 <link rel="icon" href="/assets/icons/logo.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -80,6 +81,7 @@
   </main>
 </div>
 <script src="/assets/js/app.js" defer></script>
+<script src="/assets/js/appointments.js" defer></script>
 <?php if ($calendarNav): ?><script src="/assets/js/calendar.js" defer></script><?php endif; ?>
 </body>
 </html>

@@ -29,10 +29,14 @@ final class CalendarApiTest extends DatabaseTestCase
         parent::setUp();
         $this->users = new UserRepository($this->pdo);
         $this->auth = new AuthService($this->pdo, $this->users, new AuditLogger($this->pdo));
-        $c = new CalendarApiController(new Authenticator($this->auth), new PermissionService($this->pdo), new CalendarRepository($this->pdo), new AppointmentRepository($this->pdo));
+        $perms = new PermissionService($this->pdo);
+        $repo = new AppointmentRepository($this->pdo);
+        $guard = new Authenticator($this->auth);
+        $c = new CalendarApiController($guard, $perms, new CalendarRepository($this->pdo));
+        $ap = new \App\Controllers\AppointmentApiController($guard, $perms, $repo, new \App\Services\AppointmentService($repo, $perms, new AuditLogger($this->pdo)));
         $this->router = new Router();
         $this->router->add('GET', '/api/v1/calendars', fn ($q) => $c->calendars($q));
-        $this->router->add('GET', '/api/v1/appointments', fn ($q) => $c->appointments($q));
+        $this->router->add('GET', '/api/v1/appointments', fn ($q) => $ap->index($q));
     }
 
     private function user(string $n, string $role = 'user'): int
@@ -123,7 +127,7 @@ final class CalendarApiTest extends DatabaseTestCase
         $this->user('alice');
         $ok = ['start' => '2026-11-18', 'end' => '2026-11-19'];
         $cases = [
-            [[], 'start/end absents'],
+            [['start' => '2026-11-18'], 'end absent'],
             [['start' => 'demain', 'end' => '2026-11-19'], 'start invalide'],
             [['start' => '2026-11-19', 'end' => '2026-11-18'], 'fin avant début'],
             [['start' => '2026-11-18', 'end' => '2026-11-18'], 'plage vide'],

@@ -29,12 +29,14 @@ return static function (Router $r): void {
     $r->add('GET', '/calendar', static fn (Request $q) => $page()->calendar($q));
     $r->add('GET', '/settings', static fn (Request $q) => $page()->settings($q));
 
+    foreach (['all' => '/appointments', 'mine' => '/appointments/mine', 'today' => '/appointments/today', 'upcoming' => '/appointments/upcoming'] as $scope => $path) {
+        $r->add('GET', $path, static fn (Request $q) => $page()->appointments($q, $scope));
+    }
+    $r->add('GET', '/appointments/new', static fn (Request $q) => $page()->appointments($q, 'all', true));
+
     foreach (Navigation::items() as $key => $item) {
         if ($item['phase'] !== null) {
             $r->add('GET', $item['href'], static fn (Request $q) => $page()->module($q, $key, $item['label'], $item['phase']));
         }
-    }
-    foreach (Navigation::extraModules() as $path => $m) {
-        $r->add('GET', $path, static fn (Request $q) => $page()->module($q, $path, $m['title'], $m['phase'], $m['perm'], $m['nav']));
     }
 };

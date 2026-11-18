@@ -123,6 +123,7 @@ final class PageTest extends DatabaseTestCase
                 $key === 'dashboard' => $this->pages->dashboard($req),
                 $key === 'calendar' => $this->pages->calendar($req),
                 $key === 'settings' => $this->pages->settings($req),
+                in_array($key, ['all', 'mine', 'today', 'upcoming'], true) => $this->pages->appointments($req, $key),
                 default => $this->pages->module($req, $key, $item['label'], $item['phase']),
             };
             $this->assertSame(200, $r->status, $item['href']);

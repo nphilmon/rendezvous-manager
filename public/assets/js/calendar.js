@@ -183,7 +183,7 @@
   function eventButton(ev, cls) {
     var b = el('button', 'ev ' + cls + (ev.raw.status === 'cancelled' ? ' cancelled' : '') + (ev.raw.status === 'tentative' ? ' tentative' : ''));
     b.type = 'button'; setColor(b, ev.color); b.setAttribute('aria-label', label(ev));
-    b.addEventListener('click', function () { openDialog(ev, b); });
+    b.addEventListener('click', function () { window.RVM.appointments.openDetails(ev.raw, ev.calendar, b); });
     return b;
   }
 
@@ -224,6 +224,7 @@
       a.addEventListener('click', function (e) { if (state.view !== 'day' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); go('day', d); } });
       head.appendChild(a);
       var cell = el('div', 'allday-cell' + (d === t0 ? ' today' : ''));
+      cell.addEventListener('click', function (e) { if (canCreate() && !e.target.closest('.ev')) openCreate(d, d, true); });
       vis.filter(function (ev) { return ev.allDay && ev.s < d + DAY && ev.e > d; }).forEach(function (ev) {
         shownIds[ev.id] = 1; cell.appendChild(eventButton(ev, 'chip')).appendChild(el('span', 't', ev.raw.title));
       });
@@ -238,7 +239,7 @@
     }
     body.appendChild(gut);
     days.forEach(function (d) {
-      var col = el('div', 'tg-col' + (d === t0 ? ' today' : '')); col.style.height = height + 'px';
+      var col = el('div', 'tg-col' + (d === t0 ? ' today' : '')); col.style.height = height + 'px'; attachCreate(col, d);
       col.style.setProperty('--slot', (settings.step * p) + 'px'); col.style.setProperty('--hour', (60 * p) + 'px');
       var items = [];
       vis.filter(function (ev) { return !ev.allDay; }).forEach(function (ev) {
@@ -306,6 +307,7 @@
       num.href = '/calendar?view=day&date=' + isoDate(d); num.setAttribute('aria-label', fmtDay(d, { weekday: 'long', day: 'numeric', month: 'long' }));
       num.addEventListener('click', function (e) { if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); go('day', d); } });
       cell.appendChild(num);
+      cell.addEventListener('click', function (e) { if (canCreate() && e.target === cell) openCreate(d + 9 * 3600000, d + 10 * 3600000, false); });
       var list = vis.filter(function (ev) { return ev.s < d + DAY && (ev.e > d || (ev.s === ev.e && ev.s >= d)); })
         .sort(function (a, b) { return (b.allDay - a.allDay) || (a.s - b.s); });
       list.slice(0, MAX).forEach(function (ev) {
@@ -347,32 +349,59 @@
     box.appendChild(wrap);
   }
 
-  // ---- Détails d'un rendez-vous (lecture seule ; la modification arrive en phase 7) -------------------------------------
-  var dlg = document.createElement('dialog'); dlg.className = 'ev-dialog'; dlg.setAttribute('aria-labelledby', 'ev-title');
-  document.body.appendChild(dlg);
-  var opener = null;
-  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
-  dlg.addEventListener('close', function () { if (opener) opener.focus(); });
-  function openDialog(ev, from) {
-    opener = from; dlg.textContent = '';
-    var a = ev.raw, head = el('div', 'dlg-head'), bar = el('span', 'bar'); setColor(bar, ev.color);
-    var h = el('h2', '', a.title); h.id = 'ev-title';
-    var x = el('button', 'icon-btn', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer'); x.addEventListener('click', function () { dlg.close(); });
-    head.append(bar, h, x); dlg.appendChild(head);
-    var dl = el('dl', 'kv');
-    function row(k, v) { if (v === null || v === undefined || v === '') return; dl.appendChild(el('dt', '', k)); dl.appendChild(el('dd', '', v)); }
-    row('Date', ev.allDay ? fmtDay(ev.s, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + (ev.e - ev.s > DAY ? ' → ' + fmtDay(ev.e - DAY, { day: 'numeric', month: 'long' }) : '')
-      : fmtDay(ev.s, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
-    row('Horaire', timeRange(ev) + (ev.allDay ? '' : ' (' + TZ + ')'));
-    row('Statut', STATUS[a.status] || a.status); row('Priorité', PRIORITY[a.priority] || a.priority);
-    row('Calendrier', ev.calendar ? ev.calendar.name : ''); row('Catégorie', a.category && a.category.name);
-    row('Contact', a.contact); row('Lieu', a.location); row('Adresse', a.address);
-    if (a.recurring) row('Récurrence', 'Série récurrente (les occurrences ne sont pas encore dépliées)');
-    dlg.appendChild(dl);
-    if (a.description) dlg.appendChild(el('p', 'desc', a.description));
-    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
-    x.focus();
+  // ---- Création : clic, sélection (glisser) et clavier -------------------------------------------------------------------------
+  function canCreate() { return root.dataset.canCreate === '1' && calendars.some(function (c) { return c.can && c.can.create; }); }
+  function calendarForNew() { var c = calendars.filter(function (x) { return x.can && x.can.create && hidden.indexOf(x.id) < 0; })[0]; return c ? c.id : undefined; }
+  function openCreate(startWall, endWall, allDay) {
+    window.RVM.appointments.openForm({ start: startWall, end: endWall, allDay: !!allDay, calendarId: calendarForNew() });
   }
+  window.RVM.calendarDate = function () { return state.date; };
+  document.addEventListener('rvm:appointments-changed', function () { refresh(); });
+
+  /** Convertit une ordonnée dans la colonne en minutes (alignées sur le pas), à partir de minuit. */
+  function minutesAt(col, clientY, ceil) {
+    var y = clientY - col.getBoundingClientRect().top, m = settings.startHour * 60 + y / ppm();
+    var q = ceil ? Math.ceil(m / settings.step) : Math.floor(m / settings.step);
+    return Math.min(settings.endHour * 60, Math.max(settings.startHour * 60, q * settings.step));
+  }
+  function attachCreate(col, day) {
+    col.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0 || !canCreate() || e.target.closest('.ev')) return;
+      var touch = e.pointerType === 'touch', y0 = e.clientY, a = minutesAt(col, y0, false), ghost = null, moved = false;
+      if (touch) return; // au toucher : simple appui (événement click ci-dessous), le glissement fait défiler la page
+      function move(ev) {
+        if (!moved && Math.abs(ev.clientY - y0) < 6) return;
+        moved = true;
+        var b = minutesAt(col, ev.clientY, true), lo = Math.min(a, minutesAt(col, ev.clientY, false)), hi = Math.max(a + settings.step, b);
+        if (!ghost) { ghost = el('div', 'ghost'); col.appendChild(ghost); }
+        ghost.style.top = ((lo - settings.startHour * 60) * ppm()) + 'px'; ghost.style.height = ((hi - lo) * ppm()) + 'px';
+        ghost.dataset.lo = lo; ghost.dataset.hi = hi;
+        ghost.textContent = fmtTime(day + lo * 60000) + ' – ' + fmtTime(day + hi * 60000);
+      }
+      function up() {
+        document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); document.removeEventListener('keydown', esc);
+        if (moved && ghost) {
+          var lo = +ghost.dataset.lo, hi = +ghost.dataset.hi; ghost.remove();
+          col.dataset.dragged = '1'; setTimeout(function () { col.dataset.dragged = '0'; }, 0); // le « click » qui suit le relâchement est ignoré
+          openCreate(day + lo * 60000, day + hi * 60000, false);
+        }
+      }
+      function esc(ev) { if (ev.key === 'Escape') { moved = false; if (ghost) ghost.remove(); ghost = null; up(); } }
+      document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('keydown', esc);
+    });
+    col.addEventListener('click', function (e) {
+      if (!canCreate() || e.target.closest('.ev') || e.detail === 0) return;
+      if (col.dataset.dragged === '1') return;
+      var m = minutesAt(col, e.clientY, false);
+      openCreate(day + m * 60000, day + Math.min(m + 60, settings.endHour * 60) * 60000, false);
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    var t = e.target, tag = t && t.tagName;
+    if (e.key !== 'c' || e.ctrlKey || e.metaKey || e.altKey || tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || document.querySelector('dialog[open]')) return;
+    if (!canCreate()) return;
+    e.preventDefault(); window.RVM.appointments.openNew({ calendarId: calendarForNew() });
+  });
 
   // ---- Barre d'outils, calendriers, réglages -------------------------------------------------------------------------
   function buildToolbar() {
@@ -390,7 +419,7 @@
     var fWs = field('Premier jour de la semaine', select([[1, 'Lundi'], [0, 'Dimanche']], settings.weekStart));
     var fFmt = field('Format de l\'heure', select([['24', '24 heures'], ['12', '12 heures']], settings.hour12 ? '12' : '24'));
     var wl = el('label', 'check'), cb = el('input'); cb.type = 'checkbox'; cb.checked = settings.weekend; wl.append(cb, document.createTextNode(' Afficher le week-end')); pop.appendChild(wl);
-    pop.appendChild(el('p', 'muted small', 'Fuseau horaire : ' + TZ + '. Ces réglages sont enregistrés dans ce navigateur. Raccourcis : t aujourd\'hui, j/k suivant/précédent, d/w/m/a vues.'));
+    pop.appendChild(el('p', 'muted small', 'Fuseau horaire : ' + TZ + '. Ces réglages sont enregistrés dans ce navigateur. Raccourcis : c nouveau, t aujourd\'hui, j/k suivant/précédent, d/w/m/a vues.'));
     var msg = el('p', 'pop-msg'); msg.setAttribute('role', 'alert'); pop.appendChild(msg);
     function apply() {
       msg.textContent = '';
