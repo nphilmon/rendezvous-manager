@@ -223,10 +223,11 @@
       a.setAttribute('aria-label', fmtDay(d, { weekday: 'long', day: 'numeric', month: 'long' }));
       a.addEventListener('click', function (e) { if (state.view !== 'day' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); go('day', d); } });
       head.appendChild(a);
-      var cell = el('div', 'allday-cell' + (d === t0 ? ' today' : ''));
+      var cell = el('div', 'allday-cell' + (d === t0 ? ' today' : '')); cell.dataset.day = d;
       cell.addEventListener('click', function (e) { if (canCreate() && !e.target.closest('.ev')) openCreate(d, d, true); });
       vis.filter(function (ev) { return ev.allDay && ev.s < d + DAY && ev.e > d; }).forEach(function (ev) {
-        shownIds[ev.id] = 1; cell.appendChild(eventButton(ev, 'chip')).appendChild(el('span', 't', ev.raw.title));
+        shownIds[ev.id] = 1; var chip = cell.appendChild(eventButton(ev, 'chip')); chip.appendChild(el('span', 't', ev.raw.title));
+        if (editable(ev)) makeDayDraggable(chip, ev, d);
       });
       allday.appendChild(cell);
     });
@@ -239,7 +240,7 @@
     }
     body.appendChild(gut);
     days.forEach(function (d) {
-      var col = el('div', 'tg-col' + (d === t0 ? ' today' : '')); col.style.height = height + 'px'; attachCreate(col, d);
+      var col = el('div', 'tg-col' + (d === t0 ? ' today' : '')); col.style.height = height + 'px'; col.dataset.day = d; attachCreate(col, d);
       col.style.setProperty('--slot', (settings.step * p) + 'px'); col.style.setProperty('--hour', (60 * p) + 'px');
       var items = [];
       vis.filter(function (ev) { return !ev.allDay; }).forEach(function (ev) {
@@ -257,6 +258,7 @@
         b.appendChild(el('span', 'tt', it.ev.raw.title));
         b.appendChild(el('span', 'tm', fmtTime(it.ev.s) + (it.ev.e > it.ev.s ? ' – ' + fmtTime(it.ev.e) : '')));
         col.appendChild(b);
+        if (editable(it.ev)) makeBlockEditable(b, it.ev, d, col);
       });
       if (d === t0) { var nl = el('div', 'now-line'); nl.dataset.base = String(d); col.appendChild(nl); positionNow(nl); }
       body.appendChild(col);
@@ -302,7 +304,7 @@
     }
     var t0 = today(), shown = {}, hiddenCount = 0, MAX = 3;
     days.forEach(function (d) {
-      var cell = el('div', 'mg-cell' + (new Date(d).getUTCMonth() !== month ? ' other' : '') + (d === t0 ? ' today' : ''));
+      var cell = el('div', 'mg-cell' + (new Date(d).getUTCMonth() !== month ? ' other' : '') + (d === t0 ? ' today' : '')); cell.dataset.day = d;
       var num = el('a', 'mg-num', fmtDay(d, { day: 'numeric' }) + (new Date(d).getUTCDate() === 1 ? ' ' + fmtDay(d, { month: 'short' }) : ''));
       num.href = '/calendar?view=day&date=' + isoDate(d); num.setAttribute('aria-label', fmtDay(d, { weekday: 'long', day: 'numeric', month: 'long' }));
       num.addEventListener('click', function (e) { if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); go('day', d); } });
@@ -316,6 +318,7 @@
         if (!ev.allDay) b.appendChild(el('span', 'dot'));
         if (!ev.allDay) b.appendChild(el('span', 'tm', fmtTime(ev.s)));
         b.appendChild(el('span', 'tt', ev.raw.title)); cell.appendChild(b);
+        if (editable(ev)) makeDayDraggable(b, ev, d);
       });
       if (list.length > MAX) {
         var more = el('a', 'more', '+ ' + (list.length - MAX) + ' autre' + (list.length - MAX > 1 ? 's' : ''));
@@ -348,6 +351,171 @@
     if (!any) wrap.appendChild(el('p', 'empty', 'Aucun rendez-vous sur cette période.'));
     box.appendChild(wrap);
   }
+
+
+  // ---- Déplacement et redimensionnement (souris, appui long au toucher, clavier) ----------------------------------------------
+  // Les séries récurrentes ne sont pas modifiables ici (phase 9). Chaque changement passe par l'API « reschedule » (verrou optimiste).
+  var dragging = false;
+  function editable(ev) { return !!(ev.calendar && ev.calendar.can && ev.calendar.can.update && !ev.raw.recurring); }
+  function iso19(ms) { return new Date(ms).toISOString().slice(0, 19) + 'Z'; }
+  function say(msg, err) { window.RVM.appointments.toast(msg, err); }
+
+  /** Envoie le nouvel horaire (heure murale). En cas de conflit horaire, demande confirmation puis réessaie. */
+  function commit(ev, s, e, okMsg, force) {
+    var body = { version: ev.raw.version, start: ev.allDay ? isoDate(s) : iso19(unwall(s)), end: ev.allDay ? isoDate(e) : iso19(unwall(e)) };
+    if (force) body.ignore_conflicts = true;
+    return window.RVM.api('POST', '/api/v1/appointments/' + ev.id + '/reschedule', body).then(function (r) {
+      if (r.ok) { say(okMsg); refresh(); return; }
+      var d = r.data && r.data.error && r.data.error.details;
+      if (r.status === 409 && d && d.code === 'time_conflict' && !force &&
+          window.confirm('Conflit horaire avec « ' + d.conflicts[0].title + ' ». Enregistrer quand même ?')) return commit(ev, s, e, okMsg, true);
+      var m = r.data && r.data.error ? r.data.error.message : 'Modification impossible.';
+      if (d && d.code === 'version_conflict') m = 'Ce rendez-vous a été modifié entre-temps : affichage rechargé.';
+      say(m, true); refresh();
+    });
+  }
+
+  document.addEventListener('touchmove', function (e) { if (dragging) e.preventDefault(); }, { passive: false });
+  /** Après un glisser, le navigateur envoie un « click » à l'ancêtre commun (colonne, cellule…) : on l'ignore. */
+  function suppressClick() {
+    var h = function (e) { e.stopImmediatePropagation(); e.preventDefault(); };
+    document.addEventListener('click', h, true); setTimeout(function () { document.removeEventListener('click', h, true); }, 80);
+  }
+
+  /** Contrôleur de glisser commun : seuil de 5 px (souris) ou appui long 450 ms (toucher), Échap pour annuler, défilement automatique. */
+  function pointerDrag(down, btn, cfg) {
+    if ((down.pointerType !== 'touch' && down.button !== 0) || dragging) return;
+    var touch = down.pointerType === 'touch', id = down.pointerId, x0 = down.clientX, y0 = down.clientY, started = false, timer = null, last = down, scroller = btn.closest('.tg-scroll'), auto = null;
+    function begin() {
+      started = true; dragging = true; btn.classList.add('dragging'); document.body.classList.add('is-dragging');
+      if (touch && navigator.vibrate) navigator.vibrate(12);
+      if (cfg.onStart) cfg.onStart(down);
+    }
+    function cleanup() {
+      clearTimeout(timer); clearInterval(auto);
+      document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel); document.removeEventListener('keydown', key, true);
+      if (started) { dragging = false; btn.classList.remove('dragging'); document.body.classList.remove('is-dragging'); }
+    }
+    function move(e) {
+      if (e.pointerId !== id) return;
+      last = e;
+      if (!started) {
+        var moved = Math.hypot(e.clientX - x0, e.clientY - y0);
+        if (touch) { if (moved > 8) cleanup(); return; }
+        if (moved < 5) return;
+        begin();
+      }
+      e.preventDefault(); cfg.onMove(e);
+      if (scroller && !auto) {
+        auto = setInterval(function () {
+          var r = scroller.getBoundingClientRect(), y = last.clientY, dy = y < r.top + 50 ? -14 : (y > r.bottom - 50 ? 14 : 0);
+          if (dy) { scroller.scrollTop += dy; cfg.onMove(last); }
+        }, 40);
+      }
+    }
+    function up(e) { if (e.pointerId !== id) return; var was = started; cleanup(); if (was) { suppressClick(); cfg.onDrop(e); } }
+    function cancel(e) { if (e.pointerId !== id) return; var was = started; cleanup(); if (was) cfg.onCancel(); }
+    function key(e) { if (e.key === 'Escape') { e.stopPropagation(); var was = started; cleanup(); if (was) { suppressClick(); cfg.onCancel(); } } }
+    document.addEventListener('pointermove', move); document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel); document.addEventListener('keydown', key, true);
+    if (touch) timer = setTimeout(begin, 450);
+  }
+
+  function snap(min) { return Math.round(min / settings.step) * settings.step; }
+  function rawMin(col, y) { return settings.startHour * 60 + (y - col.getBoundingClientRect().top) / ppm(); }
+  function columnAt(cols, x) {
+    var best = cols[0], bd = Infinity;
+    cols.forEach(function (c) { var r = c.getBoundingClientRect(), d = x < r.left ? r.left - x : (x > r.right ? x - r.right : 0); if (d < bd) { bd = d; best = c; } });
+    return best;
+  }
+  function labelRange(s, e) { return fmtTime(s) + ' – ' + fmtTime(e); }
+
+  /** Bloc de la grille horaire : déplacement (corps) et redimensionnement (bords haut et bas). */
+  function makeBlockEditable(b, ev, day, col) {
+    b.classList.add('editable');
+    var startsHere = ev.s >= day, endsHere = ev.e <= day + DAY, dur = ev.e - ev.s;
+    var topH, botH;
+    if (startsHere) { topH = el('span', 'rs rs-top'); topH.setAttribute('aria-hidden', 'true'); b.appendChild(topH); }
+    if (endsHere) { botH = el('span', 'rs rs-bot'); botH.setAttribute('aria-hidden', 'true'); b.appendChild(botH); }
+    var tm = b.querySelector('.tm');
+
+    function resize(down, edge) {
+      down.stopPropagation(); down.preventDefault();
+      var anchor = rawMin(col, down.clientY), res = { s: ev.s, e: ev.e }, topPx = b.style.top, hPx = b.style.height, lo = settings.startHour * 60;
+      pointerDrag(down, b, {
+        onMove: function (e) {
+          var d = snap(rawMin(col, e.clientY) - anchor) * 60000;
+          if (edge === 'bot') res.e = Math.min(day + settings.endHour * 60 * 60000, Math.max(ev.s + settings.step * 60000, ev.e + d));
+          else res.s = Math.max(day + lo * 60000, Math.min(ev.e - settings.step * 60000, ev.s + d));
+          var from = Math.max(res.s, day), to = Math.min(res.e, day + DAY);
+          b.style.top = (((from - day) / 60000 - lo) * ppm()) + 'px'; b.style.height = Math.max(18, (to - from) / 60000 * ppm() - 1) + 'px';
+          if (tm) tm.textContent = labelRange(res.s, res.e);
+        },
+        onDrop: function () { if (res.s === ev.s && res.e === ev.e) { b.style.top = topPx; b.style.height = hPx; if (tm) tm.textContent = labelRange(ev.s, ev.e); return; } commit(ev, res.s, res.e, 'Durée modifiée.'); },
+        onCancel: function () { b.style.top = topPx; b.style.height = hPx; if (tm) tm.textContent = labelRange(ev.s, ev.e); }
+      });
+    }
+    if (topH) topH.addEventListener('pointerdown', function (e) { resize(e, 'top'); });
+    if (botH) botH.addEventListener('pointerdown', function (e) { resize(e, 'bot'); });
+
+    b.addEventListener('pointerdown', function (down) {
+      if (down.target.classList.contains('rs')) return;
+      var cols = Array.prototype.slice.call(col.parentNode.querySelectorAll('.tg-col')), anchor = rawMin(col, down.clientY), res = { s: ev.s, e: ev.e }, ghost = null;
+      pointerDrag(down, b, {
+        onMove: function (e) {
+          var target = columnAt(cols, e.clientX), dd = +target.dataset.day - day, dm = snap(rawMin(col, e.clientY) - anchor);
+          res.s = ev.s + dd + dm * 60000; res.e = res.s + dur;
+          var d0 = +target.dataset.day, from = Math.max(res.s, d0), to = Math.min(res.e, d0 + DAY), lo = settings.startHour * 60;
+          if (!ghost || ghost.parentNode !== target) { if (ghost) ghost.remove(); ghost = el('div', 'drag-ghost'); setColor(ghost, ev.color); target.appendChild(ghost); }
+          var top = Math.max(0, ((from - d0) / 60000 - lo) * ppm());
+          ghost.style.top = top + 'px'; ghost.style.height = Math.max(18, Math.max(0, to - from) / 60000 * ppm()) + 'px';
+          ghost.textContent = labelRange(res.s, res.e);
+        },
+        onDrop: function () { if (ghost) ghost.remove(); if (res.s === ev.s) return; commit(ev, res.s, res.e, 'Rendez-vous déplacé.'); },
+        onCancel: function () { if (ghost) ghost.remove(); }
+      });
+    });
+
+    b.addEventListener('keydown', keyNudge(ev, true));
+  }
+
+  /** Chips « journée entière » et lignes du mois : déplacement par jours (la durée et l'heure sont conservées). */
+  function makeDayDraggable(b, ev, day) {
+    b.classList.add('editable');
+    b.addEventListener('pointerdown', function (down) {
+      var res = { s: ev.s, e: ev.e }, hl = null;
+      pointerDrag(down, b, {
+        onMove: function (e) {
+          var el2 = document.elementFromPoint(e.clientX, e.clientY), cell = el2 && el2.closest('[data-day]');
+          if (hl) hl.classList.remove('drop-target');
+          if (!cell || cell.classList.contains('tg-col')) { hl = null; res.s = ev.s; res.e = ev.e; return; }
+          hl = cell; cell.classList.add('drop-target');
+          var dd = +cell.dataset.day - day; res.s = ev.s + dd; res.e = ev.e + dd;
+        },
+        onDrop: function () { if (hl) hl.classList.remove('drop-target'); if (res.s === ev.s) return; commit(ev, res.s, res.e, 'Rendez-vous déplacé.'); },
+        onCancel: function () { if (hl) hl.classList.remove('drop-target'); }
+      });
+    });
+    b.addEventListener('keydown', keyNudge(ev, false));
+  }
+
+  /** Alternative clavier : Alt+↑/↓ déplace d'un pas, Alt+Maj+↑/↓ change la fin, Alt+←/→ déplace d'un jour. */
+  function keyNudge(ev, timed) {
+    return function (e) {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      var k = e.key, step = settings.step * 60000, s = ev.s, en = ev.e, msg = 'Rendez-vous déplacé.';
+      if (k === 'ArrowLeft' || k === 'ArrowRight') { var d = (k === 'ArrowRight' ? 1 : -1) * DAY; s += d; en += d; }
+      else if ((k === 'ArrowUp' || k === 'ArrowDown') && timed && !ev.allDay) {
+        var dir = k === 'ArrowDown' ? 1 : -1;
+        if (e.shiftKey) { en = Math.max(ev.s + step, ev.e + dir * step); msg = 'Durée modifiée.'; } else { s += dir * step; en += dir * step; }
+      } else return;
+      e.preventDefault();
+      if (busy) return; busy = true;
+      commit(ev, s, en, msg).then(function () { busy = false; }, function () { busy = false; });
+    };
+  }
+  var busy = false;
 
   // ---- Création : clic, sélection (glisser) et clavier -------------------------------------------------------------------------
   function canCreate() { return root.dataset.canCreate === '1' && calendars.some(function (c) { return c.can && c.can.create; }); }

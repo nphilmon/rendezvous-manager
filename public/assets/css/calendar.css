@@ -81,3 +81,16 @@
 @media(max-width:700px){.cal-toolbar{padding:6px 10px}.tg{min-width:calc(56px + var(--cols) * 92px)}.ev.row .tm{width:96px}}
 .ghost{position:absolute;left:2px;right:2px;background:color-mix(in srgb,var(--brand) 25%,transparent);border:2px dashed var(--brand);border-radius:6px;z-index:3;color:var(--fg);font-size:.78rem;padding:2px 6px;pointer-events:none;overflow:hidden}
 .tg-col{cursor:cell}.mg-cell{cursor:cell}.allday-cell{cursor:cell}
+
+/* Déplacement et redimensionnement */
+.ev.editable{cursor:grab}.ev.dragging{opacity:.45;cursor:grabbing}
+body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none}
+.ev.blk .rs{position:absolute;left:0;right:0;height:7px;cursor:ns-resize;z-index:2}
+.ev.blk .rs-top{top:0}.ev.blk .rs-bot{bottom:0}
+.ev.blk .rs::after{content:"";position:absolute;left:50%;width:22px;margin-left:-11px;height:3px;border-radius:2px;background:rgba(255,255,255,.7);opacity:0;transition:opacity .1s}
+.ev.blk .rs-top::after{top:2px}.ev.blk .rs-bot::after{bottom:2px}
+.ev.blk:hover .rs::after,.ev.blk:focus-visible .rs::after{opacity:1}
+.drag-ghost{position:absolute;left:2px;right:2px;border-radius:6px;background:var(--c,#2563eb);opacity:.85;border:2px solid var(--fg);z-index:6;color:#fff;font-size:.78rem;padding:2px 6px;pointer-events:none;overflow:hidden;white-space:nowrap}
+.drop-target{outline:2px solid var(--brand);outline-offset:-2px;background:var(--brand-soft)}
+@media(pointer:coarse){.ev.blk .rs{height:14px}}
+.ev.editable{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
