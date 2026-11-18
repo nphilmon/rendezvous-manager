@@ -4,6 +4,7 @@ declare(strict_types=1);
 // Lanceur de tests minimal, sans dépendance. Usage : php tests/run.php [filtre]
 require dirname(__DIR__) . '/app/bootstrap.php';
 require __DIR__ . '/TestCase.php';
+require __DIR__ . '/DatabaseTestCase.php';
 
 $filter = $argv[1] ?? '';
 $pass = $fail = $skip = 0;

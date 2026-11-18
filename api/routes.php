@@ -1,14 +1,29 @@
 <?php
 declare(strict_types=1);
 
+use App\Controllers\AuthController;
 use App\Core\Config;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
+use App\Middleware\Authenticator;
+use App\Repositories\UserRepository;
+use App\Services\AuditLogger;
+use App\Services\AuthService;
 
 /** Routes de l'API REST v1. Les routes métier sont ajoutées par phase. */
 return static function (Router $r): void {
+    $auth = static function (): AuthController {
+        $pdo = Database::connection();
+        $svc = new AuthService($pdo, new UserRepository($pdo), new AuditLogger($pdo));
+        return new AuthController($svc, new Authenticator($svc));
+    };
+    $r->add('POST', '/api/v1/auth/login', static fn (Request $q) => $auth()->login($q));
+    $r->add('POST', '/api/v1/auth/logout', static fn (Request $q) => $auth()->logout($q));
+    $r->add('GET', '/api/v1/auth/me', static fn (Request $q) => $auth()->me($q));
+    $r->add('POST', '/api/v1/auth/password', static fn (Request $q) => $auth()->changePassword($q));
+
     $r->add('GET', '/api/v1/health', static function (Request $req): Response {
         $db = 'ok';
         try {

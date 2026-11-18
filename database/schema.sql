@@ -363,3 +363,7 @@ INSERT INTO role_permissions (role_id, permission_id)
   SELECT 4, id FROM permissions
   WHERE code IN ('appointments.read','contacts.read');
 
+-- 0005_session_csrf.sql
+ALTER TABLE user_sessions
+  ADD COLUMN csrf_token CHAR(64) NOT NULL DEFAULT '' AFTER user_agent;
+

@@ -12,6 +12,7 @@ final class Request
         public readonly array $query = [],
         public readonly string $body = '',
         public readonly array $headers = [],
+        public readonly string $ip = '0.0.0.0',
     ) {
     }
 
@@ -33,12 +34,24 @@ final class Request
             $_GET,
             (string) file_get_contents('php://input'),
             $headers,
+            (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'),
         );
     }
 
     public function header(string $name): ?string
     {
         return $this->headers[strtolower($name)] ?? null;
+    }
+
+    public function cookie(string $name): ?string
+    {
+        foreach (explode(';', $this->headers['cookie'] ?? '') as $part) {
+            [$k, $v] = array_pad(explode('=', trim($part), 2), 2, '');
+            if ($k === $name) {
+                return rawurldecode($v);
+            }
+        }
+        return null;
     }
 
     /** @return array<string,mixed> */
