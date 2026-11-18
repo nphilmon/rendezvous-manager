@@ -28,6 +28,9 @@ final class Authenticator
         if ($ctx === null) {
             throw new HttpException(401, 'Authentification requise.');
         }
+        if ($ctx['user']->mustChangePassword && !in_array($req->path, ['/api/v1/auth/password', '/api/v1/auth/logout', '/api/v1/auth/me'], true)) {
+            throw new HttpException(403, 'Vous devez d\'abord changer votre mot de passe.', ['code' => 'password_change_required']);
+        }
         if (in_array($req->method, self::UNSAFE, true)) {
             $sent = $req->header('X-CSRF-Token') ?? '';
             if ($ctx['csrf'] === '' || !hash_equals($ctx['csrf'], $sent)) {

@@ -91,6 +91,12 @@ final class PageController
             'canCreate' => $u->can('appointments.write')], 'pages/manage', ['manage' => true]);
     }
 
+    /** Administration des utilisateurs (users.js) : droit « users.manage » vérifié par la navigation et par l'API. */
+    public function users(Request $req): Response
+    {
+        return $this->page($req, 'users', 'Utilisateurs', fn (AuthUser $u) => ['me' => $u->id], 'pages/users', ['usersAdmin' => true]);
+    }
+
     /** Import / export (transfer.js) : l'import n'est proposé qu'avec le droit « data.import ». */
     public function transfer(Request $req): Response
     {
@@ -134,6 +140,9 @@ final class PageController
             return Response::redirect('/login?next=' . rawurlencode(self::safeNext($next)));
         }
         $u = $ctx['user'];
+        if ($u->mustChangePassword && $navKey !== 'settings') {
+            return Response::redirect('/settings?must_change=1');
+        }
         $perm ??= Navigation::items()[$navKey]['perm'] ?? null;
         if ($perm !== null && !$u->can($perm)) {
             return Response::html($this->shell($ctx, $navKey, 'Accès refusé',
@@ -153,7 +162,7 @@ final class PageController
         return View::render('layout', $extra + [
             'user' => $u, 'csrf' => $ctx['csrf'], 'nav' => Navigation::visibleTo($u), 'current' => $navKey, 'title' => $title,
             'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
-            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'dashboard' => false, 'transfer' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
+            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'dashboard' => false, 'transfer' => false, 'usersAdmin' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
             'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
             'syncCursor' => $this->sync?->maxId() ?? 0, 'syncAccess' => $this->perms->accessToken($u),
             'defaultReminder' => (string) ($this->settings?->notifications($u->id)['default_reminder'] ?? ''), 'syncInterval' => (int) Config::get('app.sync.interval', 30),

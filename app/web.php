@@ -38,6 +38,7 @@ return static function (Router $r): void {
     }
     $r->add('GET', '/appointments/new', static fn (Request $q) => $page()->appointments($q, 'all', true));
 
+    $r->add('GET', '/users', static fn (Request $q) => $page()->users($q));
     $r->add('GET', '/import-export', static fn (Request $q) => $page()->transfer($q));
 
     foreach (['contacts', 'categories', 'calendars', 'notifications'] as $kind) {

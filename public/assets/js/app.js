@@ -149,6 +149,7 @@
     if (!cur || !n) return show('Renseignez tous les champs.', false);
     if (n !== c) return show('La confirmation ne correspond pas.', false);
     window.RVM.api('POST', '/api/v1/auth/password', { current_password: cur, new_password: n }).then(function (r) {
+      if (r.ok && /must_change=1/.test(location.search)) { location.href = '/'; return; }
       if (r.ok) { pf.reset(); return show('Mot de passe mis à jour. Les autres sessions ont été déconnectées.', true); }
       var d = r.data && r.data.error ? r.data.error : {}, extra = d.details && d.details.password ? ' ' + d.details.password.join(' ') : '';
       show((d.message || 'Échec de la mise à jour.') + extra, false);

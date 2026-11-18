@@ -374,3 +374,7 @@ ALTER TABLE sync_changes
 ALTER TABLE notification_deliveries
   ADD KEY idx_deliv_center (user_id, channel, status, sent_at);
 
+-- 0007_user_admin.sql
+-- Phase 16 : administration des utilisateurs
+ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active;
+

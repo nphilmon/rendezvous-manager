@@ -45,7 +45,8 @@ final class UserRepository
         return new AuthUser(
             (int) $u['id'], $u['username'], $u['email'], $u['first_name'], $u['last_name'],
             (int) $u['role_id'], $u['role_code'], $u['timezone'], $u['locale'],
-            $st->fetchAll(PDO::FETCH_COLUMN)
+            $st->fetchAll(PDO::FETCH_COLUMN),
+            !empty($u['must_change_password'])
         );
     }
 
@@ -59,6 +60,12 @@ final class UserRepository
         $st->execute([$d['role_code'], $d['username'], $d['email'], $d['first_name'], $d['last_name'],
             $d['password_hash'], $d['timezone'] ?? 'Europe/Paris']);
         return (int) $this->pdo->lastInsertId();
+    }
+
+    /** Définit un nouveau mot de passe ; $mustChange impose son remplacement à la prochaine connexion. */
+    public function setPassword(int $id, string $hash, bool $mustChange): void
+    {
+        $this->pdo->prepare('UPDATE users SET password_hash = ?, must_change_password = ?, failed_logins = 0, locked_until = NULL WHERE id = ?')->execute([$hash, $mustChange ? 1 : 0, $id]);
     }
 
     public function updatePasswordHash(int $id, string $hash): void

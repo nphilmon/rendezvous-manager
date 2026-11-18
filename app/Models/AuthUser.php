@@ -17,6 +17,7 @@ final class AuthUser
         public readonly string $timezone,
         public readonly string $locale,
         public readonly array $permissions = [],
+        public readonly bool $mustChangePassword = false,
     ) {
     }
 
@@ -32,7 +33,7 @@ final class AuthUser
             'id' => $this->id, 'username' => $this->username, 'email' => $this->email,
             'first_name' => $this->firstName, 'last_name' => $this->lastName,
             'role' => $this->roleCode, 'timezone' => $this->timezone, 'locale' => $this->locale,
-            'permissions' => $this->permissions,
+            'permissions' => $this->permissions, 'must_change_password' => $this->mustChangePassword,
         ];
     }
 }

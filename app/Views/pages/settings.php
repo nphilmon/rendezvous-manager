@@ -1,4 +1,7 @@
 <h1>Paramètres</h1>
+<?php if ($user->mustChangePassword): ?>
+<div class="alert alert-error" role="alert">Votre mot de passe a été défini par un administrateur : choisissez-en un nouveau pour continuer à utiliser l'application.</div>
+<?php endif; ?>
 <section class="panel" aria-labelledby="h-theme">
   <h2 id="h-theme">Affichage</h2>
   <p class="muted small">Ce réglage est enregistré dans ce navigateur uniquement. Les préférences enregistrées sur le serveur (langue, fuseau, calendrier) arrivent avec la phase 21.</p>

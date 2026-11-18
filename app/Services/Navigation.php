@@ -28,7 +28,7 @@ final class Navigation
             'transfer'     => ['label' => 'Import / export', 'href' => '/import-export', 'icon' => 'download', 'perm' => 'data.export', 'phase' => null, 'group' => 'data'],
             'history'      => ['label' => 'Historique', 'href' => '/history', 'icon' => 'history', 'perm' => 'appointments.read', 'phase' => 17, 'group' => 'data'],
             'reports'      => ['label' => 'Rapports', 'href' => '/reports', 'icon' => 'chart', 'perm' => 'reports.view', 'phase' => 17, 'group' => 'admin'],
-            'users'        => ['label' => 'Utilisateurs', 'href' => '/users', 'icon' => 'users', 'perm' => 'users.manage', 'phase' => 16, 'group' => 'admin'],
+            'users'        => ['label' => 'Utilisateurs', 'href' => '/users', 'icon' => 'users', 'perm' => 'users.manage', 'phase' => null, 'group' => 'admin'],
             'settings'     => ['label' => 'Paramètres', 'href' => '/settings', 'icon' => 'cog', 'perm' => null, 'phase' => null, 'group' => 'admin'],
         ];
     }

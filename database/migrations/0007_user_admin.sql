@@ -1,0 +1,2 @@
+-- Phase 16 : administration des utilisateurs
+ALTER TABLE users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0 AFTER is_active;

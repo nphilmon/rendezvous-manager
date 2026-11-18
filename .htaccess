@@ -1,0 +1,11 @@
+# Filet de sécurité si le dossier racine du dépôt est servi tel quel (hébergement mutualisé) :
+# seul public/ est accessible, tout le reste est interdit. Le réglage recommandé reste de pointer la racine web sur public/.
+# Nécessite mod_rewrite (activé par défaut sur cPanel).
+Options -Indexes
+RewriteEngine On
+RewriteRule ^(app|api|config|database|installer|scripts|storage|tests|workers|docs)(/|$) - [F,L]
+RewriteRule (^|/)\.(?!well-known/) - [F,L]
+RewriteRule ^(README\.md|composer\.json|composer\.lock)$ - [F,L]
+RewriteRule ^$ public/ [L]
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !^public/
+RewriteRule ^(.*)$ public/$1 [L]

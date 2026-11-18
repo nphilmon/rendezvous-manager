@@ -115,7 +115,7 @@ final class AuthService
         if ($errors) {
             throw new HttpException(422, 'Mot de passe trop faible.', ['password' => $errors]);
         }
-        $this->users->updatePasswordHash($user->id, PasswordHasher::hash($new));
+        $this->users->setPassword($user->id, PasswordHasher::hash($new), false);
         // Révoque toutes les autres sessions de l'utilisateur.
         $this->pdo->prepare('UPDATE user_sessions SET revoked_at = ? WHERE user_id = ? AND id <> ? AND revoked_at IS NULL')
             ->execute([gmdate('Y-m-d H:i:s'), $user->id, $sessionId]);
