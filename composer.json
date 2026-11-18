@@ -1,0 +1,28 @@
+{
+    "name": "rendezvous-manager/web",
+    "description": "RendezVous Manager 4.0 Web - plateforme de gestion de rendez-vous",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.3",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/",
+            "Installer\\": "installer/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "php tests/run.php",
+        "migrate": "php scripts/migrate.php"
+    }
+}

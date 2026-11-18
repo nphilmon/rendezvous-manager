@@ -2,8 +2,8 @@
 
 Plateforme web professionnelle de gestion de rendez-vous, centrée sur un calendrier interactif en grille (jour, semaine, mois, planning) inspiré du fonctionnement de Google Agenda, sans en reprendre l'identité graphique.
 
-> **État du projet : conception / démarrage.**
-> Le dépôt ne contient pour l'instant que ce README. Les fonctionnalités ci-dessous sont les **objectifs** du projet, pas des fonctions déjà livrées. Ce document sera mis à jour à chaque phase terminée ; rien n'est annoncé comme testé tant qu'il ne l'a pas été.
+> **État du projet : développement en cours (phases 1 et 2 terminées).**
+> Les fonctionnalités listées dans « Objectifs » ne sont **pas** toutes livrées : voir « Avancement » ci-dessous pour ce qui existe réellement.
 
 ## Objectifs
 
@@ -82,11 +82,42 @@ RendezVous-Manager-Web/
 19. Documentation
 20. Déploiement
 
-Avancement : **aucune phase terminée** pour l'instant.
+## Avancement
+
+| Phase | État |
+|---|---|
+| 1. Architecture et fichiers | Terminée : noyau PHP (Env, Config, Database PDO avec TLS, Request/Response/Router, Logger avec masquage des secrets), API `GET /api/v1/health` et `GET /api/v1/version`, config, `.htaccess`, exemple Nginx |
+| 2. Base MySQL et migrations | Terminée : 4 migrations (19 tables dont `schema_migrations`, plus `login_attempts` et `password_resets`), migrateur avec sommes de contrôle, `scripts/migrate.php`, `database/schema.sql` généré, rôles et permissions initiaux |
+| 3 à 20 | Non commencées |
+
+Il n'y a pas encore d'interface web, d'authentification ni d'assistant d'installation : `public/index.php` ne sert que l'API de base.
+
+### Vérifié
+
+- 10 tests (`php tests/run.php`) passent : unitaires (Env, routeur, découpage SQL, journalisation, JSON invalide) et intégration des migrations (création des tables, idempotence, seed des rôles, InnoDB/utf8mb4, contraintes CHECK et clés étrangères, rejet d'une migration modifiée).
+- Les tests d'intégration ont été exécutés **uniquement sur MariaDB 10.11**. **MySQL 8 n'a pas été testé.**
+- Les routes `/api/v1/version` et `/api/v1/health` ont été appelées avec le serveur intégré de PHP. La connexion TLS à la base n'a pas été testée.
+
+## Développement
+
+```bash
+composer install            # optionnel : un autoloader de secours existe
+cp .env.example .env        # puis renseigner DB_*
+php scripts/migrate.php     # applique les migrations (--status pour l'état)
+php scripts/build_schema.php  # régénère database/schema.sql
+```
+
+Tests (la base doit se nommer `*_test`, jamais la production) :
+
+```bash
+TEST_DB_USER=... TEST_DB_PASSWORD=... TEST_DB_NAME=rendezvous_manager_test php tests/run.php
+```
+
+Sans variables `TEST_DB_*`, les tests d'intégration sont ignorés.
 
 ## Installation
 
-La procédure détaillée (préparation Linux, Apache/Nginx, PHP, MySQL/MariaDB, phpMyAdmin, HTTPS, pare-feu, Composer, assistant d'installation, cron, Web Push, SMTP) sera fournie dans `docs/installation.md` une fois l'application réalisée. Aucune installation n'a été effectuée ni testée à ce stade.
+La procédure détaillée (préparation Linux, Apache/Nginx, PHP, MySQL/MariaDB, phpMyAdmin, HTTPS, pare-feu, Composer, assistant d'installation, cron, Web Push, SMTP) sera fournie dans `docs/installation.md` une fois l'application réalisée. Aucune installation complète sur un serveur distant n'a été effectuée ni testée à ce stade.
 
 ## Licence
 
