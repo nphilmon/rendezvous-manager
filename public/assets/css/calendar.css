@@ -1,0 +1,81 @@
+/* Calendrier en grille */
+.content:has(.calendar-root){padding:0}
+.calendar-root{display:flex;flex-direction:column;height:calc(100vh - var(--top));min-height:420px}
+@supports(height:100dvh){.calendar-root{height:calc(100dvh - var(--top))}}
+.cal-toolbar{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.cal-hidden,.cal-status{margin:0;font-size:.82rem;color:var(--muted)}.cal-status.error{color:var(--bad)}
+.cal-toolbar .pop-wrap{margin-left:auto;position:relative}
+.pop{position:absolute;right:0;top:42px;width:280px;max-width:calc(100vw - 24px);background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px 14px 14px;z-index:25}
+.pop .check{display:flex;align-items:center;gap:6px;font-weight:400;margin-top:12px}.pop .check input{width:auto}
+.pop-msg{color:var(--bad);margin:6px 0 0;font-size:.85rem}
+.cal-grid{flex:1;min-height:0;display:flex;flex-direction:column}
+.tg-scroll{flex:1;overflow:auto;position:relative;background:var(--surface)}
+
+/* Grille horaire (jour / semaine) */
+.tg{min-width:calc(56px + var(--cols) * 104px)}
+.tg-row{display:grid;grid-template-columns:56px repeat(var(--cols),minmax(0,1fr))}
+.tg-top{position:sticky;top:0;z-index:6;background:var(--surface);border-bottom:1px solid var(--line)}
+.tg-gutter{position:sticky;left:0;z-index:4;background:var(--surface)}
+.tg-top .tg-gutter{z-index:7}
+.tg-allday-label{font-size:.7rem;color:var(--muted);padding:4px 4px 0 0;text-align:right}
+.day-head{display:flex;flex-direction:column;align-items:center;padding:6px 0;text-decoration:none;color:var(--fg);border-left:1px solid var(--line)}
+.day-head .dow{font-size:.72rem;text-transform:uppercase;color:var(--muted);letter-spacing:.04em}
+.day-head .dnum{font-size:1.35rem;line-height:1.6rem;width:2rem;height:2rem;display:grid;place-items:center;border-radius:50%}
+.day-head:hover .dnum{background:var(--brand-soft)}
+.day-head.today .dow{color:var(--brand)}.day-head.today .dnum{background:var(--brand);color:var(--brand-fg)}
+.allday-cell{border-left:1px solid var(--line);padding:2px;min-height:26px;display:flex;flex-direction:column;gap:2px}
+.tg-hours{position:sticky;left:0;border-right:1px solid var(--line)}
+.tg-hours{position:relative}
+.hour{position:absolute;right:6px;transform:translateY(-50%);font-size:.7rem;color:var(--muted);white-space:nowrap}
+.tg-col{position:relative;border-left:1px solid var(--line);
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(color-mix(in srgb,var(--line) 45%,transparent) 1px,transparent 1px);
+  background-size:100% var(--hour),100% var(--slot)}
+.tg-col.today{background-color:color-mix(in srgb,var(--brand) 5%,transparent)}
+.now-line{position:absolute;left:0;right:0;height:2px;background:var(--bad);z-index:3;pointer-events:none}
+.now-line::before{content:"";position:absolute;left:-5px;top:-4px;width:10px;height:10px;border-radius:50%;background:var(--bad)}
+
+/* Rendez-vous */
+.ev{font:inherit;text-align:left;cursor:pointer;border:0;color:#fff;background:var(--c,#2563eb)}
+.ev:focus-visible{outline:3px solid var(--fg);outline-offset:1px;z-index:5}
+.ev.cancelled{opacity:.55;text-decoration:line-through}
+.ev.tentative{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.22) 0 6px,transparent 6px 12px)}
+.ev.blk{position:absolute;border-radius:6px;padding:2px 6px;overflow:hidden;border:1px solid var(--surface);display:flex;flex-direction:column;gap:0;font-size:.78rem;line-height:1.25;z-index:2}
+.ev.blk:hover{filter:brightness(1.1);z-index:4}
+.ev .tt{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ev .tm{opacity:.9;font-size:.72rem;white-space:nowrap}
+.ev.chip{display:block;width:100%;border-radius:4px;padding:1px 6px;font-size:.76rem;line-height:1.5;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ev.chip .t{pointer-events:none}
+.ev.line{display:flex;align-items:center;gap:5px;width:100%;background:none;color:var(--fg);padding:1px 4px;border-radius:4px;font-size:.76rem;line-height:1.5;min-width:0}
+.ev.line:hover{background:var(--brand-soft)}
+.ev.line .dot,.ev.row .dot{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.ev.line .tm{color:var(--muted);flex:none}.ev.line .tt{flex:1;min-width:0;font-weight:400}
+
+/* Mois */
+.month .mg{display:grid;grid-template-columns:repeat(var(--cols),minmax(0,1fr));min-width:calc(var(--cols) * 90px);grid-auto-rows:minmax(112px,1fr);height:100%}
+.mg-dow{grid-row:1;padding:6px;text-align:center;font-size:.72rem;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);height:32px;position:sticky;top:0;background:var(--surface);z-index:2}
+.mg-cell{border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:2px 3px;display:flex;flex-direction:column;gap:1px;min-width:0;overflow:hidden}
+.mg-cell.other{background:color-mix(in srgb,var(--bg) 70%,transparent)}.mg-cell.other .mg-num{color:var(--muted)}
+.mg-num{align-self:center;min-width:1.7rem;height:1.7rem;padding:0 4px;display:grid;place-items:center;border-radius:99px;text-decoration:none;color:var(--fg);font-size:.82rem}
+.mg-num:hover{background:var(--brand-soft)}.mg-cell.today .mg-num{background:var(--brand);color:var(--brand-fg);font-weight:700}
+.more{font-size:.75rem;color:var(--muted);padding:1px 6px;text-decoration:none;border-radius:4px}.more:hover{background:var(--brand-soft)}
+.month .mg{grid-template-rows:32px;grid-auto-rows:minmax(112px,1fr)}
+
+/* Planning */
+.agenda{padding:8px 16px 24px}.agenda .empty{color:var(--muted);text-align:center;margin-top:48px}
+.ag-day h3{margin:14px 0 4px;font-size:.95rem;text-transform:capitalize;padding-bottom:4px;border-bottom:1px solid var(--line)}.ag-day h3.today{color:var(--brand)}
+.ev.row{display:flex;align-items:flex-start;gap:12px;width:100%;background:none;color:var(--fg);padding:8px;border-radius:8px}
+.ev.row:hover{background:var(--brand-soft)}.ev.row .dot{margin-top:6px}.ev.row .tm{width:130px;flex:none;color:var(--muted);font-size:.85rem}
+.ev.row .main{display:flex;flex-direction:column;min-width:0}.ev.row .tt{font-weight:600}.ev.row .sub{color:var(--muted);font-size:.82rem}
+
+/* Calendriers (barre latérale) */
+.cal-list{margin-bottom:6px}.cal-list .pad{margin:4px 10px}
+.cal-item{display:flex;align-items:center;gap:8px;margin:0;padding:5px 10px;font-weight:400;cursor:pointer;border-radius:8px;font-size:.9rem}
+.cal-item:hover{background:var(--bg)}.cal-item input{width:auto;margin:0}
+.swatch{width:12px;height:12px;border-radius:3px;background:var(--c);flex:none}.cal-item .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Fenêtre de détails */
+.ev-dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--fg);padding:18px;width:min(480px,calc(100vw - 24px));box-shadow:var(--shadow)}
+.ev-dialog::backdrop{background:rgba(0,0,0,.45)}
+.dlg-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}.dlg-head h2{flex:1;margin:0;overflow-wrap:anywhere}.dlg-head .icon-btn{font-size:1.4rem}
+.dlg-head .bar{width:6px;align-self:stretch;border-radius:3px;background:var(--c)}
+.ev-dialog .desc{white-space:pre-wrap;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+@media(max-width:700px){.cal-toolbar{padding:6px 10px}.tg{min-width:calc(56px + var(--cols) * 92px)}.ev.row .tm{width:96px}}

@@ -70,6 +70,7 @@
     sb.classList.toggle('open', open); scrim.hidden = !open; st.setAttribute('aria-expanded', String(open));
     st.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
   }
+  window.RVM.sidebarClose = function () { sidebar(false); };
   if (st) {
     st.addEventListener('click', function () { sidebar(!sb.classList.contains('open')); });
     scrim.addEventListener('click', function () { sidebar(false); });
@@ -85,48 +86,67 @@
   }
   window.addEventListener('online', online); window.addEventListener('offline', online); online();
 
-  // ---- Mini-calendrier -----------------------------------------------------
+  // ---- Mini-calendrier (fuseau de l'utilisateur, premier jour de semaine du calendrier) ----------------------
   var mc = $('#mini-cal');
   if (mc) {
+    var tz = mc.dataset.tz || 'UTC';
     var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-    var iso = function (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
-    var parse = function (s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
-    var selected = parse(mc.dataset.date), today = new Date();
-    var cursor = new Date((selected || today).getFullYear(), (selected || today).getMonth(), 1);
+    var iso = function (d) { return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); };
+    var parse = function (s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null; };
+    var nowInTz = function () {
+      var o = {}; new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).forEach(function (p) { o[p.type] = +p.value; });
+      return new Date(Date.UTC(o.year, o.month - 1, o.day));
+    };
+    var weekStart = function () { try { return JSON.parse(localStorage.getItem('rvm_cal_settings')).weekStart === 0 ? 0 : 1; } catch (e) { return 1; } };
+    var selected = parse(mc.dataset.date), today = nowInTz();
+    var cursor = new Date(Date.UTC((selected || today).getUTCFullYear(), (selected || today).getUTCMonth(), 1));
     var view = mc.dataset.view || 'week';
-    var monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
-    var dayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    var fmt = function (o) { o.timeZone = 'UTC'; return new Intl.DateTimeFormat('fr-FR', o); };
+    var monthFmt = fmt({ month: 'long', year: 'numeric' }), dayFmt = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    var DOW = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 
     var draw = function () {
       mc.textContent = '';
+      var ws = weekStart();
       var head = document.createElement('div'); head.className = 'mc-head';
       var mk = function (label, aria, delta) {
         var b = document.createElement('button'); b.type = 'button'; b.className = 'icon-btn'; b.setAttribute('aria-label', aria); b.textContent = label;
-        b.addEventListener('click', function () { cursor = new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1); draw(); mc.querySelector('.mc-head button' + (delta < 0 ? ':first-child' : ':last-child')).focus(); });
+        b.addEventListener('click', function () { cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + delta, 1)); draw(); mc.querySelector('.mc-head button' + (delta < 0 ? ':first-child' : ':last-child')).focus(); });
         return b;
       };
       var title = document.createElement('strong'); title.textContent = monthFmt.format(cursor); title.setAttribute('aria-live', 'polite');
       head.append(mk('‹', 'Mois précédent', -1), title, mk('›', 'Mois suivant', 1));
       mc.appendChild(head);
       var grid = document.createElement('div'); grid.className = 'mc-grid'; grid.setAttribute('role', 'grid');
-      ['L', 'M', 'M', 'J', 'V', 'S', 'D'].forEach(function (d, i) {
-        var c = document.createElement('span'); c.className = 'mc-dow'; c.textContent = d;
-        c.setAttribute('aria-label', ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'][i]); grid.appendChild(c);
-      });
-      var offset = (cursor.getDay() + 6) % 7, start = new Date(cursor.getFullYear(), cursor.getMonth(), 1 - offset);
+      for (var k = 0; k < 7; k++) {
+        var dw = (ws + k) % 7, c = document.createElement('span'); c.className = 'mc-dow'; c.textContent = DOW[dw].charAt(0).toUpperCase(); c.setAttribute('aria-label', DOW[dw]); grid.appendChild(c);
+      }
+      var offset = (cursor.getUTCDay() - ws + 7) % 7, start = Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), 1 - offset);
       for (var i = 0; i < 42; i++) {
-        var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        var d = new Date(start + i * 86400000);
         var b = document.createElement('button'); b.type = 'button'; b.className = 'mc-day';
-        if (d.getMonth() !== cursor.getMonth()) b.classList.add('other');
+        if (d.getUTCMonth() !== cursor.getUTCMonth()) b.classList.add('other');
         if (iso(d) === iso(today)) b.classList.add('today');
         if (selected && iso(d) === iso(selected)) { b.classList.add('selected'); b.setAttribute('aria-current', 'date'); }
-        b.textContent = d.getDate(); b.setAttribute('aria-label', dayFmt.format(d)); b.dataset.date = iso(d);
-        b.addEventListener('click', function (e) { location.href = '/calendar?view=' + encodeURIComponent(view) + '&date=' + e.currentTarget.dataset.date; });
+        b.textContent = d.getUTCDate(); b.setAttribute('aria-label', dayFmt.format(d)); b.dataset.date = iso(d);
+        b.addEventListener('click', function (e) {
+          var date = e.currentTarget.dataset.date;
+          if (window.RVM.calendarGo) { window.RVM.calendarGo(date); if (window.RVM.sidebarClose) window.RVM.sidebarClose(); }
+          else location.href = '/calendar?view=' + encodeURIComponent(view) + '&date=' + date;
+        });
         grid.appendChild(b);
       }
       mc.appendChild(grid);
     };
     draw();
+    window.RVM.miniCal = {
+      select: function (isoDate) {
+        selected = parse(isoDate);
+        if (selected) cursor = new Date(Date.UTC(selected.getUTCFullYear(), selected.getUTCMonth(), 1));
+        draw();
+      },
+      redraw: draw
+    };
   }
 
   // ---- Changement de mot de passe (paramètres) ------------------------------

@@ -60,7 +60,8 @@
 <div class="shell">
   <aside class="sidebar" id="sidebar" aria-label="Navigation principale">
     <?php if ($canCreate): ?><a class="btn btn-primary btn-new" href="/appointments/new"><svg><use href="#i-plus"/></svg> Nouveau rendez-vous</a><?php endif; ?>
-    <div class="mini-cal" id="mini-cal" data-date="<?= $e($date) ?>" data-view="<?= $e($view) ?>" aria-label="Mini-calendrier"></div>
+    <div class="mini-cal" id="mini-cal" data-date="<?= $e($date) ?>" data-view="<?= $e($view) ?>" data-tz="<?= $e($tz) ?>" aria-label="Mini-calendrier"></div>
+    <?php if ($calendarNav): ?><div class="cal-list" id="cal-list"></div><?php endif; ?>
     <nav>
       <?php $groupLabels = ['main' => '', 'appointments' => 'Rendez-vous', 'data' => 'Données', 'admin' => 'Gestion'];
       $last = null;

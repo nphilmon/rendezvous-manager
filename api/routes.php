@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 use App\Controllers\AuthController;
+use App\Controllers\CalendarApiController;
+use App\Repositories\AppointmentRepository;
+use App\Repositories\CalendarRepository;
+use App\Services\PermissionService;
 use App\Core\Config;
 use App\Core\Database;
 use App\Core\Request;
@@ -23,6 +27,14 @@ return static function (Router $r): void {
     $r->add('POST', '/api/v1/auth/logout', static fn (Request $q) => $auth()->logout($q));
     $r->add('GET', '/api/v1/auth/me', static fn (Request $q) => $auth()->me($q));
     $r->add('POST', '/api/v1/auth/password', static fn (Request $q) => $auth()->changePassword($q));
+
+    $cal = static function (): CalendarApiController {
+        $pdo = Database::connection();
+        $svc = new AuthService($pdo, new UserRepository($pdo), new AuditLogger($pdo));
+        return new CalendarApiController(new Authenticator($svc), new PermissionService($pdo), new CalendarRepository($pdo), new AppointmentRepository($pdo));
+    };
+    $r->add('GET', '/api/v1/calendars', static fn (Request $q) => $cal()->calendars($q));
+    $r->add('GET', '/api/v1/appointments', static fn (Request $q) => $cal()->appointments($q));
 
     $r->add('GET', '/api/v1/health', static function (Request $req): Response {
         $db = 'ok';

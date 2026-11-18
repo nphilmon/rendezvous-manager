@@ -65,7 +65,7 @@ final class PageController
         $date = $req->query['date'] ?? '';
         $date = is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && strtotime($date) !== false
             && checkdate((int) substr($date, 5, 2), (int) substr($date, 8, 2), (int) substr($date, 0, 4)) ? $date : '';
-        return $this->page($req, 'calendar', 'Calendrier', fn () => ['view' => $view, 'date' => $date, 'views' => self::VIEWS], 'pages/calendar',
+        return $this->page($req, 'calendar', 'Calendrier', fn (AuthUser $u) => ['view' => $view, 'date' => $date, 'views' => self::VIEWS, 'tz' => $u->timezone], 'pages/calendar',
             ['calendarNav' => true, 'view' => $view, 'date' => $date]);
     }
 
@@ -125,7 +125,7 @@ final class PageController
             'user' => $u, 'csrf' => $ctx['csrf'], 'nav' => Navigation::visibleTo($u), 'current' => $navKey, 'title' => $title,
             'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
             'version' => Config::get('app.version'), 'calendarNav' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
-            'canCreate' => $u->can('appointments.write'),
+            'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
         ], null);
     }
 }
