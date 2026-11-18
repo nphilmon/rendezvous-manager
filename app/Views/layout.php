@@ -8,6 +8,7 @@
 <meta name="user-tz" content="<?= $e($tz) ?>">
 <meta name="sync-cursor" content="<?= (int) $syncCursor ?>">
 <meta name="sync-access" content="<?= $e($syncAccess) ?>">
+<meta name="default-reminder" content="<?= $e($defaultReminder) ?>">
 <meta name="sync-interval" content="<?= (int) $syncInterval ?>">
 <title><?= $e($title) ?> – <?= $e($appName) ?></title>
 <link rel="icon" href="/assets/icons/logo.svg" type="image/svg+xml">
@@ -49,7 +50,7 @@
 
   <button class="sync" id="sync-state" type="button" aria-label="Actualiser maintenant" title="Actualiser maintenant"><svg aria-hidden="true"><use href="#i-wifi"/></svg><span class="hide-sm" id="sync-label">Synchronisation…</span></button>
   <span class="sr-only" id="sync-live" role="status" aria-live="polite"></span>
-  <a class="icon-btn bell" href="/notifications" aria-label="Notifications<?= $unread > 0 ? ' (' . (int) $unread . ' non lues)' : '' ?>"><svg><use href="#i-bell"/></svg><?php if ($unread > 0): ?><span class="badge"><?= (int) $unread ?></span><?php endif; ?></a>
+  <a class="icon-btn bell" id="bell" href="/notifications" aria-label="Notifications<?= $unread > 0 ? ' (' . (int) $unread . ' non lues)' : '' ?>"><svg><use href="#i-bell"/></svg><?php if ($unread > 0): ?><span class="badge"><?= (int) $unread ?></span><?php endif; ?></a>
 
   <div class="menu-wrap">
     <button class="avatar" id="user-menu-btn" aria-haspopup="true" aria-expanded="false" aria-controls="user-menu" aria-label="Menu utilisateur"><?= $e(mb_strtoupper(mb_substr($user->firstName, 0, 1) . mb_substr($user->lastName, 0, 1))) ?></button>

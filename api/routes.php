@@ -5,7 +5,11 @@ use App\Controllers\AuthController;
 use App\Controllers\AppointmentApiController;
 use App\Controllers\CalendarApiController;
 use App\Controllers\CategoryApiController;
+use App\Controllers\NotificationApiController;
+use App\Controllers\SettingsApiController;
 use App\Controllers\SyncApiController;
+use App\Repositories\NotificationRepository;
+use App\Repositories\SettingsRepository;
 use App\Repositories\SyncRepository;
 use App\Controllers\ContactApiController;
 use App\Repositories\CategoryRepository;
@@ -68,6 +72,22 @@ return static function (Router $r, ?\PDO $injected = null): void {
         return new SyncApiController($guard, $perms, new SyncRepository($pdo));
     };
     $r->add('GET', '/api/v1/sync/changes', static fn (Request $q) => $sync()->changes($q));
+    $notif = static function () use ($deps): NotificationApiController {
+        [$pdo, $guard] = $deps();
+        return new NotificationApiController($guard, new NotificationRepository($pdo), $pdo);
+    };
+    $settingsCtl = static function () use ($deps): SettingsApiController {
+        [$pdo, $guard] = $deps();
+        return new SettingsApiController($guard, new SettingsRepository($pdo));
+    };
+    $r->add('GET', '/api/v1/notifications', static fn (Request $q) => $notif()->index($q));
+    $r->add('GET', '/api/v1/notifications/count', static fn (Request $q) => $notif()->count($q));
+    $r->add('GET', '/api/v1/notifications/upcoming', static fn (Request $q) => $notif()->upcoming($q));
+    $r->add('POST', '/api/v1/notifications/read-all', static fn (Request $q) => $notif()->readAll($q));
+    $r->add('POST', '/api/v1/notifications/{id}/read', static fn (Request $q, array $p) => $notif()->read($q, $p));
+    $r->add('POST', '/api/v1/notifications/{id}/unread', static fn (Request $q, array $p) => $notif()->unread($q, $p));
+    $r->add('GET', '/api/v1/settings', static fn (Request $q) => $settingsCtl()->show($q));
+    $r->add('PUT', '/api/v1/settings', static fn (Request $q) => $settingsCtl()->update($q));
     $r->add('GET', '/api/v1/calendars', static fn (Request $q) => $cal()->calendars($q));
     $r->add('POST', '/api/v1/calendars', static fn (Request $q) => $cal()->store($q));
     $r->add('PUT', '/api/v1/calendars/{id}', static fn (Request $q, array $p) => $cal()->update($q, $p));

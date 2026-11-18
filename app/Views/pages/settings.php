@@ -32,3 +32,29 @@
   </form>
   <p class="muted small">Les autres sessions ouvertes seront déconnectées.</p>
 </section>
+
+<section class="panel" aria-labelledby="h-notif">
+  <h2 id="h-notif">Notifications</h2>
+  <form id="notif-form" novalidate>
+    <div class="alert" id="notif-msg" role="status" hidden></div>
+    <label class="check"><input type="checkbox" id="n-enabled"> Recevoir des notifications de rappel</label>
+    <fieldset class="chan"><legend>Canaux</legend>
+      <label class="check"><input type="checkbox" checked disabled> Dans l'application (toujours actif)</label>
+      <label class="check"><input type="checkbox" disabled> Notifications push du navigateur <span class="muted small">— pas encore disponible</span></label>
+      <label class="check"><input type="checkbox" disabled> E-mail <span class="muted small">— pas encore disponible</span></label>
+    </fieldset>
+    <label for="n-default">Rappel proposé pour les nouveaux rendez-vous</label>
+    <select id="n-default"><option value="">Aucun</option><option value="0">À l'heure du rendez-vous</option><option value="5">5 minutes avant</option><option value="10">10 minutes avant</option><option value="15">15 minutes avant</option><option value="30">30 minutes avant</option><option value="60">1 heure avant</option><option value="120">2 heures avant</option><option value="1440">1 jour avant</option></select>
+    <div class="row2">
+      <div><label for="n-qs">Heures silencieuses : début</label><input id="n-qs" type="time"></div>
+      <div><label for="n-qe">Heures silencieuses : fin</label><input id="n-qe" type="time"></div>
+    </div>
+    <p class="muted small">Heure locale (<?= $e($user->timezone) ?>). Les heures silencieuses retardent les canaux sonores (push, e-mail) ; le centre de notifications reste silencieux par nature.</p>
+    <label for="n-privacy">Confidentialité du contenu</label>
+    <select id="n-privacy"><option value="full">Afficher le titre, l'heure et le lieu</option><option value="minimal">Message générique, sans détail du rendez-vous</option></select>
+    <label for="n-missed">Rappels manqués (serveur arrêté ou compte inactif)</label>
+    <select id="n-missed"><option value="deliver">Les rattraper (jusqu'à 24 h, tant que le rendez-vous n'est pas terminé)</option><option value="skip">Ne pas les rattraper</option></select>
+    <button class="btn btn-primary" type="submit">Enregistrer</button>
+  </form>
+</section>
+<script src="/assets/js/settings.js" defer></script>

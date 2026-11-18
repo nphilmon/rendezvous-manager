@@ -101,4 +101,21 @@ final class Rules
         }
         return is_string($v) && ctype_digit($v) && (int) $v > 0 ? (int) $v : null;
     }
+
+    /**
+     * Réglage énuméré optionnel : renvoie [clé => valeur] s'il est présent et valide.
+     * @param array<string,mixed> $in @param list<string> $allowed @param array<string,list<string>> $e
+     * @return array<string,string>
+     */
+    public static function enumSetting(array $in, string $k, array $allowed, array &$e): array
+    {
+        if (!array_key_exists($k, $in)) {
+            return [];
+        }
+        if (!is_string($in[$k]) || !in_array($in[$k], $allowed, true)) {
+            $e[$k][] = 'Valeur attendue : ' . implode(', ', $allowed) . '.';
+            return [];
+        }
+        return [$k => $in[$k]];
+    }
 }

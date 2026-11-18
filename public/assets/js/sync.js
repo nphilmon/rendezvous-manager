@@ -61,6 +61,19 @@
   window.addEventListener('offline', function () { clearTimeout(timer); setState('offline'); });
   // une action de l'utilisateur ne change pas le curseur côté client : le prochain cycle la verra (et les autres onglets aussi)
 
+  /** Pastille de la cloche : nombre de notifications non lues (créée, mise à jour ou retirée). */
+  window.RVM.setBadge = function (n) {
+    var bell = document.getElementById('bell'); if (!bell) return;
+    var b = bell.querySelector('.badge');
+    if (n > 0) { if (!b) { b = document.createElement('span'); b.className = 'badge'; bell.appendChild(b); } b.textContent = String(n); bell.setAttribute('aria-label', 'Notifications (' + n + ' non lues)'); }
+    else { if (b) b.remove(); bell.setAttribute('aria-label', 'Notifications'); }
+  };
+  document.addEventListener('rvm:sync', function (e) {
+    if (e.detail.reset || e.detail.changes.some(function (c) { return c.entity === 'notification'; })) {
+      window.RVM.api('GET', '/api/v1/notifications/count').then(function (r) { if (r.ok) window.RVM.setBadge(r.data.unread); });
+    }
+  });
+
   /** Aides pour les pages : le changement concerne-t-il une entité (ou un rechargement complet est-il demandé) ? */
   window.RVM.sync = {
     poll: function () { return poll(true); },

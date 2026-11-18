@@ -266,19 +266,25 @@ final class AppointmentRepository
 
     public function reminderFor(int $appointmentId, int $userId): ?int
     {
-        $st = $this->pdo->prepare("SELECT MIN(offset_minutes) FROM reminders WHERE appointment_id = ? AND user_id = ? AND channel = 'inapp'");
+        $st = $this->pdo->prepare('SELECT MIN(offset_minutes) FROM reminders WHERE appointment_id = ? AND user_id = ?');
         $st->execute([$appointmentId, $userId]);
         $v = $st->fetchColumn();
         return $v === false || $v === null ? null : (int) $v;
     }
 
-    /** Remplace le rappel « dans l'application » de l'utilisateur (le moteur d'envoi arrive en phase 12). */
-    public function setReminder(int $appointmentId, int $userId, ?int $minutes): void
+    /**
+     * Remplace le rappel de l'utilisateur : une ligne par canal activé dans ses réglages (exécutées par le moteur de
+     * notifications, voir NotificationEngine).
+     * @param list<string> $channels
+     */
+    public function setReminder(int $appointmentId, int $userId, ?int $minutes, array $channels = ['inapp']): void
     {
-        $this->pdo->prepare("DELETE FROM reminders WHERE appointment_id = ? AND user_id = ? AND channel = 'inapp'")->execute([$appointmentId, $userId]);
+        $this->pdo->prepare('DELETE FROM reminders WHERE appointment_id = ? AND user_id = ?')->execute([$appointmentId, $userId]);
         if ($minutes !== null) {
-            $this->pdo->prepare("INSERT INTO reminders (appointment_id, user_id, offset_minutes, channel) VALUES (?, ?, ?, 'inapp')")
-                ->execute([$appointmentId, $userId, $minutes]);
+            $ins = $this->pdo->prepare('INSERT INTO reminders (appointment_id, user_id, offset_minutes, channel) VALUES (?, ?, ?, ?)');
+            foreach ($channels ?: ['inapp'] as $ch) {
+                $ins->execute([$appointmentId, $userId, $minutes, $ch]);
+            }
         }
     }
 

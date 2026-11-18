@@ -34,11 +34,13 @@ final class SyncRepository
      */
     public function changesSince(int $cursor, array $calendarIds, int $userId, bool $seesAll, int $limit): array
     {
-        $or = ["entity_type = 'category'", $seesAll ? "entity_type = 'contact'" : "(entity_type = 'contact' AND changed_by = ?)"];
+        // notification : changed_by = destinataire (les notifications ne concernent que lui)
+        $or = ["entity_type = 'category'", $seesAll ? "entity_type = 'contact'" : "(entity_type = 'contact' AND changed_by = ?)", "(entity_type = 'notification' AND changed_by = ?)"];
         $args = [$cursor];
         if (!$seesAll) {
             $args[] = $userId;
         }
+        $args[] = $userId;
         if ($calendarIds) {
             $or[] = 'calendar_id IN (' . implode(',', array_fill(0, count($calendarIds), '?')) . ')';
             array_push($args, ...$calendarIds);

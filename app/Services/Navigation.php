@@ -24,7 +24,7 @@ final class Navigation
             'contacts'     => ['label' => 'Contacts', 'href' => '/contacts', 'icon' => 'book', 'perm' => 'contacts.read', 'phase' => null, 'group' => 'data'],
             'categories'   => ['label' => 'Catégories', 'href' => '/categories', 'icon' => 'tag', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'data'],
             'calendars'    => ['label' => 'Calendriers', 'href' => '/calendars', 'icon' => 'layers', 'perm' => 'appointments.read', 'phase' => null, 'group' => 'data'],
-            'notifications' => ['label' => 'Notifications', 'href' => '/notifications', 'icon' => 'bell', 'perm' => null, 'phase' => 12, 'group' => 'data'],
+            'notifications' => ['label' => 'Notifications', 'href' => '/notifications', 'icon' => 'bell', 'perm' => null, 'phase' => null, 'group' => 'data'],
             'history'      => ['label' => 'Historique', 'href' => '/history', 'icon' => 'history', 'perm' => 'appointments.read', 'phase' => 17, 'group' => 'data'],
             'reports'      => ['label' => 'Rapports', 'href' => '/reports', 'icon' => 'chart', 'perm' => 'reports.view', 'phase' => 14, 'group' => 'admin'],
             'users'        => ['label' => 'Utilisateurs', 'href' => '/users', 'icon' => 'users', 'perm' => 'users.manage', 'phase' => 16, 'group' => 'admin'],

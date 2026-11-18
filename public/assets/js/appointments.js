@@ -353,10 +353,20 @@
     var prio = select(Object.keys(PRIORITY).map(function (k) { return [k, PRIORITY[k]]; }), a ? a.priority : 'normal');
     var rowS = el('div', 'row2'); rowS.append(field('Statut', stat, 'af-stat'), field('Priorité', prio, 'af-prio')); form.appendChild(rowS);
     var color = select(COLORS, a ? a.color : '');
-    var remOpts = REMINDERS.slice(); var rv = a ? a.reminder_minutes : null;
-    if (rv !== null && rv !== undefined && !remOpts.some(function (o) { return o[0] === rv; })) remOpts.push([rv, rv + ' minutes avant (personnalisé)']);
-    var rem = select(remOpts, rv);
-    var rowR = el('div', 'row2'); rowR.append(field('Couleur', color, 'af-color'), field('Rappel', rem, 'af-rem', 'Rappel dans l\'application ; l\'envoi automatique arrive avec la phase 12.')); form.appendChild(rowR);
+    var rv = a ? a.reminder_minutes : null, dm = document.querySelector('meta[name="default-reminder"]');
+    if (!a && dm && dm.content !== '') rv = parseInt(dm.content, 10); // rappel proposé par défaut (réglage de l'utilisateur)
+    var remOpts = REMINDERS.concat([['custom', 'Personnalisé…']]);
+    var preset = rv === null || rv === undefined || REMINDERS.some(function (o) { return o[0] === rv; });
+    var rem = select(remOpts, preset ? rv : 'custom');
+    var customBox = el('div', 'rep-line'), cn = input('number', { min: 0, max: 40320, 'aria-label': 'Durée du rappel' }), cu = el('select'); cu.setAttribute('aria-label', 'Unité du rappel');
+    [['1', 'minutes'], ['60', 'heures'], ['1440', 'jours']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; cu.appendChild(op); });
+    customBox.append(cn, cu, document.createTextNode(' avant')); customBox.hidden = true;
+    if (!preset) { var unit = rv % 1440 === 0 ? '1440' : (rv % 60 === 0 ? '60' : '1'); cu.value = unit; cn.value = String(rv / parseInt(unit, 10)); }
+    function syncCustom() { customBox.hidden = rem.value !== 'custom'; }
+    rem.addEventListener('change', syncCustom); syncCustom();
+    state.remCustom = { box: customBox, n: cn, u: cu };
+    var rowR = el('div', 'row2'); var remField = field('Rappel', rem, 'af-rem', 'Notification envoyée par le serveur, même si cette page est fermée.'); remField.insertBefore(customBox, remField.querySelector('.fld-err'));
+    rowR.append(field('Couleur', color, 'af-color'), remField); form.appendChild(rowR);
     var notes = el('textarea'); notes.rows = 2; notes.maxLength = 10000; notes.value = a && a.notes ? a.notes : '';
     form.appendChild(field('Notes', notes, 'af-notes'));
 
@@ -478,6 +488,14 @@
   }
   var CODES_REV = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
+  /** Minutes avant le rendez-vous : préréglage, valeur personnalisée (nombre × unité) ou null. */
+  function reminderValue(c) {
+    if (c.rem.value === '') return null;
+    if (c.rem.value !== 'custom') return +c.rem.value;
+    var n = parseInt(state.remCustom.n.value, 10), u = parseInt(state.remCustom.u.value, 10), m = n * u;
+    return isFinite(m) && n >= 0 && m <= 40320 ? m : null;
+  }
+
   function lastCalendar(cals) {
     var last = null; try { last = +localStorage.getItem('rvm_last_calendar'); } catch (e) {}
     return cals.some(function (c) { return c.id === last; }) ? last : cals[0].id;
@@ -512,6 +530,7 @@
     var c = state.ctl, errs = {};
     if (!c.title.value.trim()) errs.title = ['Le titre est requis.'];
     var allDay = c.ad.checked, s = parseWall(c.sd.value, allDay ? '00:00' : c.st.value), e = parseWall(c.ed.value, allDay ? '00:00' : c.et.value);
+    if (c.rem.value === 'custom' && reminderValue(c) === null) errs.reminder_minutes = ['Durée de rappel invalide (4 semaines maximum).'];
     if (s === null) errs.start = ['Date de début requise.'];
     if (e === null) errs.end = ['Date de fin requise.'];
     if (s !== null && e !== null && (allDay ? e < s : e <= s)) errs.end = [allDay ? 'La fin ne peut pas précéder le début.' : 'La fin doit être postérieure au début.'];
@@ -520,7 +539,7 @@
       calendar_id: +c.cal.value, title: c.title.value.trim(), description: c.desc.value.trim() || null, notes: c.notes.value.trim() || null,
       all_day: allDay, timezone: TZ, location: c.loc.value.trim() || null, address: c.adr.value.trim() || null,
       category_id: c.cat.value ? +c.cat.value : null, contact_id: c.con.value ? +c.con.value : null,
-      status: c.stat.value, priority: c.prio.value, color: c.color.value || null, reminder_minutes: c.rem.value === '' ? null : +c.rem.value
+      status: c.stat.value, priority: c.prio.value, color: c.color.value || null, reminder_minutes: reminderValue(c)
     };
     if (allDay) { body.start = c.sd.value; body.end = dateStr(e + DAY); } // fin exclusive côté API
     else { body.start = isoUtc(unwall(s)); body.end = isoUtc(unwall(e)); }

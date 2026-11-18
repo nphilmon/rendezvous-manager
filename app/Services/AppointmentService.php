@@ -61,7 +61,7 @@ final class AppointmentService
             if ($rule !== null) {
                 $this->saveSeries($id, $rule, $data);
             }
-            $this->repo->setReminder($id, $u->id, $data['reminder_minutes']);
+            $this->repo->setReminder($id, $u->id, $data['reminder_minutes'], $this->channels($u));
             $this->repo->recordChange($data['calendar_id'], $id, 'created', $u->id);
             $this->audit->log('appointment.create', $u->id, 'appointment', $id, $ip, ['calendar_id' => $data['calendar_id']]);
             return $id;
@@ -100,7 +100,7 @@ final class AppointmentService
                 $this->saveSeries($id, $rule, $data);
             }
             if (array_key_exists('reminder_minutes', $in)) {
-                $this->repo->setReminder($id, $u->id, $data['reminder_minutes']);
+                $this->repo->setReminder($id, $u->id, $data['reminder_minutes'], $this->channels($u));
             }
             $this->repo->recordChange($data['calendar_id'], $id, 'updated', $u->id);
             if ($data['calendar_id'] !== (int) $row['calendar_id']) {
@@ -192,7 +192,7 @@ final class AppointmentService
         $data = AppointmentValidator::validate($in, $u->timezone);
         $newId = $this->tx(function () use ($u, $data, $id, $ip): int {
             $new = $this->repo->insert($data, $u->id);
-            $this->repo->setReminder($new, $u->id, $data['reminder_minutes']);
+            $this->repo->setReminder($new, $u->id, $data['reminder_minutes'], $this->channels($u));
             $this->repo->recordChange($data['calendar_id'], $new, 'created', $u->id);
             $this->audit->log('appointment.duplicate', $u->id, 'appointment', $new, $ip, ['source' => $id]);
             return $new;
@@ -298,7 +298,7 @@ final class AppointmentService
                 $this->repo->deleteExceptionsFrom($id, $orig);
                 $new = $this->repo->insert($data, $u->id);
                 $this->saveSeries($new, $newRule, $data);
-                $this->repo->setReminder($new, $u->id, $data['reminder_minutes']);
+                $this->repo->setReminder($new, $u->id, $data['reminder_minutes'], $this->channels($u));
                 $this->repo->recordChange((int) $row['calendar_id'], $id, 'updated', $u->id);
                 $this->repo->recordChange($data['calendar_id'], $new, 'created', $u->id);
                 $this->audit->log('appointment.split', $u->id, 'appointment', $new, $ip, ['source' => $id, 'from' => $orig]);
@@ -338,7 +338,7 @@ final class AppointmentService
                 }
             }
             if (array_key_exists('reminder_minutes', $in)) {
-                $this->repo->setReminder($id, $u->id, $data['reminder_minutes']);
+                $this->repo->setReminder($id, $u->id, $data['reminder_minutes'], $this->channels($u));
             }
             $this->repo->recordChange($data['calendar_id'], $id, 'updated', $u->id);
             if ($data['calendar_id'] !== (int) $row['calendar_id']) {
@@ -427,6 +427,12 @@ final class AppointmentService
             $this->repo->recordChange((int) $row['calendar_id'], $id, $scope === 'all' ? 'deleted' : 'updated', $u->id);
             $this->audit->log('appointment.delete_' . $scope, $u->id, 'appointment', $id, $ip, ['occurrence' => $orig]);
         });
+    }
+
+    /** Canaux de rappel de l'utilisateur (réglages), « inapp » toujours présent. @return list<string> */
+    private function channels(AuthUser $u): array
+    {
+        return (new \App\Repositories\SettingsRepository($this->pdo))->notifications($u->id)['channels'];
     }
 
     // ---- internes ------------------------------------------------------------------------------

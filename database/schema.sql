@@ -367,3 +367,10 @@ INSERT INTO role_permissions (role_id, permission_id)
 ALTER TABLE user_sessions
   ADD COLUMN csrf_token CHAR(64) NOT NULL DEFAULT '' AFTER user_agent;
 
+-- 0006_notification_center.sql
+ALTER TABLE sync_changes
+  MODIFY entity_type ENUM('appointment','calendar','contact','category','notification') NOT NULL;
+
+ALTER TABLE notification_deliveries
+  ADD KEY idx_deliv_center (user_id, channel, status, sent_at);
+

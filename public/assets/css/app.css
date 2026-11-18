@@ -178,3 +178,13 @@ button.sync.is-busy svg{animation:rvm-spin 1s linear infinite}
 button.sync.is-offline{color:var(--bad)}button.sync.is-error{color:var(--warn)}
 @keyframes rvm-spin{to{transform:rotate(360deg)}}
 .sync-banner{margin-bottom:12px}
+
+/* Notifications */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;font:inherit;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--brand);border-bottom-color:var(--brand);font-weight:600}
+.notif{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px;margin-bottom:8px}
+.notif.unread{border-left:4px solid var(--brand)}.notif .main{flex:1;min-width:0}.notif .tt{font-weight:600;display:block}.notif .when{color:var(--muted);font-size:.8rem}
+.notif .btns{display:flex;gap:6px;flex-wrap:wrap}
+fieldset.chan{border:1px solid var(--line);border-radius:10px;margin:12px 0 0;padding:4px 12px 8px}.chan legend{font-size:.85rem;font-weight:600;padding:0 6px}
+.panel label.check{display:flex;align-items:center;gap:8px;font-weight:400}.panel label.check input{width:auto}

@@ -5,6 +5,7 @@ use App\Controllers\PageController;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Router;
+use App\Repositories\SettingsRepository;
 use App\Repositories\StatsRepository;
 use App\Repositories\SyncRepository;
 use App\Repositories\UserRepository;
@@ -22,6 +23,7 @@ return static function (Router $r): void {
             new PermissionService($pdo),
             new StatsRepository($pdo),
             new SyncRepository($pdo),
+            new SettingsRepository($pdo),
         );
     };
 
@@ -36,7 +38,7 @@ return static function (Router $r): void {
     }
     $r->add('GET', '/appointments/new', static fn (Request $q) => $page()->appointments($q, 'all', true));
 
-    foreach (['contacts', 'categories', 'calendars'] as $kind) {
+    foreach (['contacts', 'categories', 'calendars', 'notifications'] as $kind) {
         $r->add('GET', '/' . $kind, static fn (Request $q) => $page()->manage($q, $kind));
     }
 

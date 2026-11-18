@@ -318,5 +318,65 @@
     document.addEventListener('rvm:sync', function (e) { if (window.RVM.sync.touches(e.detail, ['calendar'])) load(); });
   }
 
-  ({ contacts: contacts, categories: categories, calendars: calendars }[kind] || function () {})();
+  // =========================================================== NOTIFICATIONS =======================================
+  function notifications() {
+    var tab = 'unread', page = 1, TABS = [['unread', 'Non lues'], ['read', 'Lues'], ['upcoming', 'À venir'], ['all', 'Historique']];
+    var fmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: A.TZ });
+    var tabs = el('div', 'tabs'); tabs.setAttribute('role', 'tablist'); toolbar.appendChild(tabs);
+    var allBtn = el('button', 'btn', 'Tout marquer comme lu'); allBtn.type = 'button'; toolbar.appendChild(allBtn);
+    var tabBtns = {};
+    TABS.forEach(function (t) {
+      var b = el('button', '', t[1]); b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(t[0] === tab));
+      b.addEventListener('click', function () { tab = t[0]; page = 1; Object.keys(tabBtns).forEach(function (k) { tabBtns[k].setAttribute('aria-selected', String(k === tab)); }); load(); });
+      tabBtns[t[0]] = b; tabs.appendChild(b);
+    });
+    allBtn.addEventListener('click', function () {
+      api('POST', '/api/v1/notifications/read-all').then(function (r) { if (r.ok) { window.RVM.setBadge(0); toast(r.data.updated ? 'Toutes les notifications sont marquées comme lues.' : 'Aucune notification non lue.'); load(); } });
+    });
+
+    function open(n) {
+      Promise.all([api('GET', '/api/v1/appointments/' + n.appointment_id + (n.occurrence_start ? '?occurrence=' + encodeURIComponent(n.occurrence_start) : '')), A.calendars()]).then(function (res) {
+        var r = res[0];
+        if (!r.ok) { toast('Ce rendez-vous n\'existe plus ou n\'est plus accessible.', true); return; }
+        A.openDetails(r.data.data, res[1].filter(function (c) { return c.id === r.data.data.calendar_id; })[0], document.activeElement);
+        if (n.id && !n.read) api('POST', '/api/v1/notifications/' + n.id + '/read').then(function (x) { if (x.ok) { window.RVM.setBadge(x.data.unread); load(); } });
+      });
+    }
+    function card(n, upcoming) {
+      var d = el('div', 'notif' + (!upcoming && !n.read ? ' unread' : '')), main = el('div', 'main');
+      main.append(el('span', 'tt', n.title), el('span', '', n.body || ''));
+      main.appendChild(el('span', 'when', upcoming ? 'Déclenchement le ' + fmt.format(Date.parse(n.trigger_at)) : 'Reçue le ' + fmt.format(Date.parse(n.sent_at)) + (n.read ? ' · lue' : '')));
+      var btns = el('div', 'btns');
+      if (upcoming || n.appointment_exists) { var v = el('button', 'btn btn-sm', 'Voir le rendez-vous'); v.type = 'button'; v.addEventListener('click', function () { open(upcoming ? { appointment_id: n.appointment_id, occurrence_start: n.occurrence_start } : n); }); btns.appendChild(v); }
+      if (!upcoming) {
+        var m = el('button', 'btn btn-sm', n.read ? 'Marquer comme non lue' : 'Marquer comme lue'); m.type = 'button';
+        m.addEventListener('click', function () { api('POST', '/api/v1/notifications/' + n.id + (n.read ? '/unread' : '/read')).then(function (r) { if (r.ok) { window.RVM.setBadge(r.data.unread); load(); } else toast(msg(r, 'Action impossible.'), true); }); });
+        btns.appendChild(m);
+      }
+      d.append(main, btns); return d;
+    }
+    function load() {
+      allBtn.hidden = tab === 'upcoming' || tab === 'read';
+      results.setAttribute('aria-busy', 'true');
+      var req = tab === 'upcoming' ? api('GET', '/api/v1/notifications/upcoming') : api('GET', '/api/v1/notifications?' + new URLSearchParams({ filter: tab, page: page, per_page: 20 }));
+      req.then(function (r) {
+        results.removeAttribute('aria-busy'); results.textContent = ''; pager.textContent = '';
+        if (!r.ok) { empty(msg(r, 'Chargement impossible.')); return; }
+        var rows = r.data.data;
+        if (!rows.length) {
+          empty({ unread: 'Aucune notification non lue.', read: 'Aucune notification lue.', upcoming: 'Aucun rappel prévu dans les 7 prochains jours. Ajoutez un rappel à un rendez-vous pour en recevoir.', all: 'Aucune notification pour l\'instant.' }[tab]);
+        } else rows.forEach(function (n) { results.appendChild(card(n, tab === 'upcoming')); });
+        if (r.data.meta) {
+          window.RVM.setBadge(r.data.meta.unread);
+          var meta = r.data.meta; pager.appendChild(el('span', 'muted', meta.total + ' notification' + (meta.total > 1 ? 's' : '') + ' · page ' + meta.page + ' / ' + meta.pages));
+          var pv = el('button', 'btn', 'Précédent'), nx = el('button', 'btn', 'Suivant'); pv.type = nx.type = 'button'; pv.disabled = meta.page <= 1; nx.disabled = meta.page >= meta.pages;
+          pv.addEventListener('click', function () { page--; load(); }); nx.addEventListener('click', function () { page++; load(); }); pager.append(pv, nx);
+        }
+      });
+    }
+    load();
+    document.addEventListener('rvm:sync', function (e) { if (window.RVM.sync.touches(e.detail, ['notification', 'appointment'])) load(); });
+  }
+
+  ({ contacts: contacts, categories: categories, calendars: calendars, notifications: notifications }[kind] || function () {})();
 })();

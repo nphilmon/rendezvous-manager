@@ -9,6 +9,7 @@ use App\Core\Response;
 use App\Core\View;
 use App\Models\AuthUser;
 use App\Repositories\StatsRepository;
+use App\Repositories\SettingsRepository;
 use App\Repositories\SyncRepository;
 use App\Services\AuthService;
 use App\Services\Navigation;
@@ -26,6 +27,7 @@ final class PageController
         private PermissionService $perms,
         private StatsRepository $stats,
         private ?SyncRepository $sync = null,
+        private ?SettingsRepository $settings = null,
     ) {
     }
 
@@ -84,8 +86,8 @@ final class PageController
     /** Gestion des contacts, catégories et calendriers (interface pilotée par manage.js). */
     public function manage(Request $req, string $kind): Response
     {
-        $titles = ['contacts' => 'Contacts', 'categories' => 'Catégories', 'calendars' => 'Calendriers'];
-        $write = ['contacts' => 'contacts.write', 'categories' => 'categories.manage', 'calendars' => 'calendars.create'];
+        $titles = ['contacts' => 'Contacts', 'categories' => 'Catégories', 'calendars' => 'Calendriers', 'notifications' => 'Notifications'];
+        $write = ['contacts' => 'contacts.write', 'categories' => 'categories.manage', 'calendars' => 'calendars.create', 'notifications' => 'appointments.read'];
         return $this->page($req, $kind, $titles[$kind], fn (AuthUser $u) => ['kind' => $kind, 'heading' => $titles[$kind], 'canWrite' => $u->can($write[$kind]),
             'canCreate' => $u->can('appointments.write')], 'pages/manage', ['manage' => true]);
     }
@@ -147,7 +149,8 @@ final class PageController
             'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
             'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
             'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
-            'syncCursor' => $this->sync?->maxId() ?? 0, 'syncAccess' => $this->perms->accessToken($u), 'syncInterval' => (int) Config::get('app.sync.interval', 30),
+            'syncCursor' => $this->sync?->maxId() ?? 0, 'syncAccess' => $this->perms->accessToken($u),
+            'defaultReminder' => (string) ($this->settings?->notifications($u->id)['default_reminder'] ?? ''), 'syncInterval' => (int) Config::get('app.sync.interval', 30),
         ], null);
     }
 }
