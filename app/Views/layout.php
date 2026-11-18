@@ -83,5 +83,6 @@
 <script src="/assets/js/app.js" defer></script>
 <script src="/assets/js/appointments.js" defer></script>
 <?php if ($calendarNav): ?><script src="/assets/js/calendar.js" defer></script><?php endif; ?>
+<?php if ($manage): ?><script src="/assets/js/manage.js" defer></script><?php endif; ?>
 </body>
 </html>

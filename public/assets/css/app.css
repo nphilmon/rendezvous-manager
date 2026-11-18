@@ -155,3 +155,18 @@ label.radio{display:flex;align-items:center;gap:8px;font-weight:400;margin:8px 0
 .rep-line{display:flex;align-items:center;gap:8px}.rep-line input{width:80px}.rep-line select{width:auto}
 .rep-days{display:flex;gap:6px;flex-wrap:wrap}.rep-days .day{display:inline-flex;align-items:center;gap:3px;margin:0;font-weight:400;padding:4px 8px;border:1px solid var(--line);border-radius:99px;cursor:pointer}
 .rep-days .day input{width:auto;margin:0}.rec{color:var(--muted);font-size:.85em}
+
+/* Gestion : contacts, catégories, calendriers */
+.manage-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+.search-inline{display:flex;gap:8px;flex:1;max-width:460px}.search-inline input{flex:1}
+.btn-sm{padding:4px 10px;font-size:.85rem}
+.row-actions{white-space:nowrap;text-align:right}.row-actions .btn{margin-left:6px}
+.swatch-lg{display:inline-block;width:14px;height:14px;border-radius:4px;background:var(--c);margin-right:10px;vertical-align:-2px}
+.sub-h{font-size:.95rem;margin:16px 0 6px}
+.linked{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow:auto}
+.link-row{display:flex;gap:12px;width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:6px 8px;color:var(--fg);font:inherit;cursor:pointer}
+.link-row:hover{background:var(--brand-soft)}.link-row .when{color:var(--muted);flex:none;min-width:140px;font-size:.85rem}
+.manage-dialog{width:min(560px,calc(100vw - 16px))}
+.share-tbl th,.share-tbl td{padding:6px 8px;font-size:.85rem}.share-tbl input{width:auto}
+.lookup{display:flex;flex-direction:column;margin-top:4px;max-height:160px;overflow:auto}
+.tbl td .small{font-weight:400}

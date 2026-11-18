@@ -4,7 +4,11 @@ declare(strict_types=1);
 use App\Controllers\AuthController;
 use App\Controllers\AppointmentApiController;
 use App\Controllers\CalendarApiController;
-use App\Controllers\CatalogApiController;
+use App\Controllers\CategoryApiController;
+use App\Controllers\ContactApiController;
+use App\Repositories\CategoryRepository;
+use App\Repositories\ContactRepository;
+use App\Services\ChangeRecorder;
 use App\Services\AppointmentService;
 use App\Repositories\AppointmentRepository;
 use App\Repositories\CalendarRepository;
@@ -36,22 +40,44 @@ return static function (Router $r, ?\PDO $injected = null): void {
         $svc = new AuthService($pdo, new UserRepository($pdo), new AuditLogger($pdo));
         return [$pdo, new Authenticator($svc), new PermissionService($pdo)];
     };
-    $cal = static function () use ($deps): CalendarApiController {
+    $changes = static function () use ($deps): ChangeRecorder {
+        [$pdo] = $deps();
+        return new ChangeRecorder($pdo, new AuditLogger($pdo));
+    };
+    $cal = static function () use ($deps, $changes): CalendarApiController {
         [$pdo, $guard, $perms] = $deps();
-        return new CalendarApiController($guard, $perms, new CalendarRepository($pdo));
+        return new CalendarApiController($guard, $perms, new CalendarRepository($pdo), $changes());
     };
     $appt = static function () use ($deps): AppointmentApiController {
         [$pdo, $guard, $perms] = $deps();
         $repo = new AppointmentRepository($pdo);
         return new AppointmentApiController($guard, $perms, $repo, new AppointmentService($repo, $perms, new AuditLogger($pdo)));
     };
-    $catalog = static function () use ($deps): CatalogApiController {
-        [$pdo, $guard] = $deps();
-        return new CatalogApiController($guard, $pdo);
+    $contact = static function () use ($deps, $changes): ContactApiController {
+        [$pdo, $guard, $perms] = $deps();
+        return new ContactApiController($guard, new ContactRepository($pdo), new AppointmentRepository($pdo), $perms, $changes());
+    };
+    $category = static function () use ($deps, $changes): CategoryApiController {
+        [$pdo, $guard, $perms] = $deps();
+        return new CategoryApiController($guard, new CategoryRepository($pdo), $perms, $changes());
     };
     $r->add('GET', '/api/v1/calendars', static fn (Request $q) => $cal()->calendars($q));
-    $r->add('GET', '/api/v1/categories', static fn (Request $q) => $catalog()->categories($q));
-    $r->add('GET', '/api/v1/contacts', static fn (Request $q) => $catalog()->contacts($q));
+    $r->add('POST', '/api/v1/calendars', static fn (Request $q) => $cal()->store($q));
+    $r->add('PUT', '/api/v1/calendars/{id}', static fn (Request $q, array $p) => $cal()->update($q, $p));
+    $r->add('DELETE', '/api/v1/calendars/{id}', static fn (Request $q, array $p) => $cal()->destroy($q, $p));
+    $r->add('GET', '/api/v1/calendars/{id}/permissions', static fn (Request $q, array $p) => $cal()->permissions($q, $p));
+    $r->add('PUT', '/api/v1/calendars/{id}/permissions', static fn (Request $q, array $p) => $cal()->setPermissions($q, $p));
+    $r->add('GET', '/api/v1/users/lookup', static fn (Request $q) => $cal()->lookupUsers($q));
+    $r->add('GET', '/api/v1/categories', static fn (Request $q) => $category()->index($q));
+    $r->add('POST', '/api/v1/categories', static fn (Request $q) => $category()->store($q));
+    $r->add('PUT', '/api/v1/categories/{id}', static fn (Request $q, array $p) => $category()->update($q, $p));
+    $r->add('DELETE', '/api/v1/categories/{id}', static fn (Request $q, array $p) => $category()->destroy($q, $p));
+    $r->add('GET', '/api/v1/contacts', static fn (Request $q) => $contact()->index($q));
+    $r->add('POST', '/api/v1/contacts', static fn (Request $q) => $contact()->store($q));
+    $r->add('GET', '/api/v1/contacts/{id}', static fn (Request $q, array $p) => $contact()->show($q, $p));
+    $r->add('PUT', '/api/v1/contacts/{id}', static fn (Request $q, array $p) => $contact()->update($q, $p));
+    $r->add('DELETE', '/api/v1/contacts/{id}', static fn (Request $q, array $p) => $contact()->destroy($q, $p));
+    $r->add('GET', '/api/v1/contacts/{id}/appointments', static fn (Request $q, array $p) => $contact()->appointments($q, $p));
     $r->add('GET', '/api/v1/appointments', static fn (Request $q) => $appt()->index($q));
     $r->add('POST', '/api/v1/appointments', static fn (Request $q) => $appt()->store($q));
     $r->add('GET', '/api/v1/appointments/{id}', static fn (Request $q, array $p) => $appt()->show($q, $p));

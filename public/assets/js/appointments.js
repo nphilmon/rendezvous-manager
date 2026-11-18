@@ -99,7 +99,7 @@
   }
   var calendars = function () { return ref('cal', '/api/v1/calendars'); };
   var categories = function () { return ref('cat', '/api/v1/categories'); };
-  var contacts = function () { return ref('con', '/api/v1/contacts'); };
+  var contacts = function () { return ref('con', '/api/v1/contacts?per_page=500'); };
   function calendarOf(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
 
   // ---- Détails d'un rendez-vous ---------------------------------------------------------------------------------------
@@ -332,7 +332,7 @@
     var cal = select(cals.map(function (c) { return [c.id, c.name]; }), a ? a.calendar_id : (opts.calendarId || lastCalendar(cals)));
     form.appendChild(field('Calendrier', cal, 'af-cal'));
     var cat = select([[null, 'Aucune']].concat(cats.map(function (c) { return [c.id, c.name]; })), a && a.category ? a.category.id : null);
-    var con = select([[null, 'Aucun']].concat(cons.map(function (c) { return [c.id, c.name + (c.company ? ' (' + c.company + ')' : '')]; })), a ? a.contact_id : null);
+    var con = select([[null, 'Aucun']].concat(cons.map(function (c) { return [c.id, c.name + (c.company ? ' (' + c.company + ')' : '')]; })), a ? a.contact_id : (opts.contactId || null));
     var rowC = el('div', 'row2'); rowC.append(field('Catégorie', cat, 'af-cat'), field('Contact', con, 'af-con')); form.appendChild(rowC);
     var loc = input('text', { maxlength: 190 }); loc.value = a && a.location ? a.location : '';
     var adr = input('text', { maxlength: 255 }); adr.value = a && a.address ? a.address : '';
@@ -573,7 +573,7 @@
     openForm(Object.assign({ start: start, end: start + 3600000 }, extra || {}));
   }
 
-  window.RVM.appointments = { askScope: askScope, seriesBody: seriesBody, describeRule: describeRule, TZ: TZ, openForm: openForm, openNew: openNew, openDetails: openDetails, calendars: calendars, toast: toast,
+  window.RVM.appointments = { invalidate: function () { cache = {}; }, askScope: askScope, seriesBody: seriesBody, describeRule: describeRule, TZ: TZ, openForm: openForm, openNew: openNew, openDetails: openDetails, calendars: calendars, toast: toast,
     time: { wall: wall, unwall: unwall, dateStr: dateStr, timeStr: timeStr, isoUtc: isoUtc } };
 
   document.addEventListener('DOMContentLoaded', function () {

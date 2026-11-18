@@ -34,6 +34,10 @@ return static function (Router $r): void {
     }
     $r->add('GET', '/appointments/new', static fn (Request $q) => $page()->appointments($q, 'all', true));
 
+    foreach (['contacts', 'categories', 'calendars'] as $kind) {
+        $r->add('GET', '/' . $kind, static fn (Request $q) => $page()->manage($q, $kind));
+    }
+
     foreach (Navigation::items() as $key => $item) {
         if ($item['phase'] !== null) {
             $r->add('GET', $item['href'], static fn (Request $q) => $page()->module($q, $key, $item['label'], $item['phase']));

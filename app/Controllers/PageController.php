@@ -79,6 +79,15 @@ final class PageController
             'heading' => $titles[$scope], 'statuses' => self::STATUS_LABELS, 'priorities' => self::PRIORITY_LABELS], 'pages/appointments');
     }
 
+    /** Gestion des contacts, catégories et calendriers (interface pilotée par manage.js). */
+    public function manage(Request $req, string $kind): Response
+    {
+        $titles = ['contacts' => 'Contacts', 'categories' => 'Catégories', 'calendars' => 'Calendriers'];
+        $write = ['contacts' => 'contacts.write', 'categories' => 'categories.manage', 'calendars' => 'calendars.create'];
+        return $this->page($req, $kind, $titles[$kind], fn (AuthUser $u) => ['kind' => $kind, 'heading' => $titles[$kind], 'canWrite' => $u->can($write[$kind]),
+            'canCreate' => $u->can('appointments.write')], 'pages/manage', ['manage' => true]);
+    }
+
     public function module(Request $req, string $key, string $title, int $phase, ?string $perm = null, ?string $navKey = null): Response
     {
         $q = $req->query['q'] ?? null;
@@ -134,7 +143,7 @@ final class PageController
         return View::render('layout', $extra + [
             'user' => $u, 'csrf' => $ctx['csrf'], 'nav' => Navigation::visibleTo($u), 'current' => $navKey, 'title' => $title,
             'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
-            'version' => Config::get('app.version'), 'calendarNav' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
+            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
             'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
         ], null);
     }
