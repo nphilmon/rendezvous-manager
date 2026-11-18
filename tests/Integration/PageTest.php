@@ -144,35 +144,6 @@ final class PageTest extends DatabaseTestCase
         $this->assertTrue(str_contains($ok, 'data-view="month"') && str_contains($ok, 'data-date="2026-11-18"'));
     }
 
-    public function testDashboardCountsAreRealAndPermissionScoped(): void
-    {
-        $a = $this->user('alice', 'user');
-        $b = $this->user('bob', 'user');
-        $this->pdo->exec("INSERT INTO calendars (owner_id, name) VALUES ($a,'A'), ($b,'B')");
-        $ins = $this->pdo->prepare("INSERT INTO appointments (uid, calendar_id, created_by, title, start_utc, end_utc, status, deleted_at) VALUES (UUID(),?,?,?,?,?,?,?)");
-        $now = new \DateTimeImmutable('2026-11-18 10:00:00', new \DateTimeZone('UTC')); // mercredi
-        $rows = [
-            [1, $a, 'aujourd\'hui', '2026-11-18 14:00:00', '2026-11-18 15:00:00', 'scheduled', null],
-            [1, $a, 'lundi (semaine)', '2026-11-16 08:00:00', '2026-11-16 09:00:00', 'completed', null],
-            [1, $a, 'semaine suivante', '2026-11-25 08:00:00', '2026-11-25 09:00:00', 'scheduled', null],
-            [1, $a, 'annulé futur', '2026-11-26 08:00:00', '2026-11-26 09:00:00', 'cancelled', null],
-            [1, $a, 'supprimé', '2026-11-18 16:00:00', '2026-11-18 17:00:00', 'scheduled', '2026-11-01 00:00:00'],
-            [2, $b, 'autre calendrier', '2026-11-18 14:00:00', '2026-11-18 15:00:00', 'scheduled', null],
-        ];
-        foreach ($rows as $r) {
-            $ins->execute($r);
-        }
-        $stats = new StatsRepository($this->pdo);
-        $perms = new PermissionService($this->pdo);
-        $c = $stats->counts($perms->readableCalendarIds($this->users->findAuthUser($a)), 'Europe/Paris', $now);
-        $this->assertSame(['total' => 4, 'today' => 1, 'week' => 2, 'upcoming' => 2], $c);
-        $this->assertSame(['total' => 0, 'today' => 0, 'week' => 0, 'upcoming' => 0], $stats->counts([], 'UTC', $now));
-        // fuseau : 23:30 UTC le 17 est déjà le 18 à Paris
-        $this->pdo->exec("UPDATE appointments SET start_utc='2026-11-17 23:30:00', end_utc='2026-11-17 23:45:00' WHERE title='lundi (semaine)'");
-        $paris = $stats->counts([1], 'Europe/Paris', $now);
-        $this->assertSame(2, $paris['today'], 'bornes calculées dans le fuseau utilisateur');
-    }
-
     public function testUnreadBadgeCountsOnlyOwnInappNotifications(): void
     {
         $a = $this->user('alice', 'user');

@@ -89,6 +89,7 @@
 <script src="/assets/js/appointments.js" defer></script>
 <script src="/assets/js/sync.js" defer></script>
 <?php if ($calendarNav): ?><script src="/assets/js/calendar.js" defer></script><?php endif; ?>
+<?php if (!empty($dashboard)): ?><script src="/assets/js/dashboard.js" defer></script><?php endif; ?>
 <?php if ($manage): ?><script src="/assets/js/manage.js" defer></script><?php endif; ?>
 </body>
 </html>

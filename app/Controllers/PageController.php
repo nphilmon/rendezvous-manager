@@ -9,6 +9,7 @@ use App\Core\Response;
 use App\Core\View;
 use App\Models\AuthUser;
 use App\Repositories\StatsRepository;
+use App\Services\DashboardService;
 use App\Repositories\SettingsRepository;
 use App\Repositories\SyncRepository;
 use App\Services\AuthService;
@@ -58,10 +59,8 @@ final class PageController
 
     public function dashboard(Request $req): Response
     {
-        return $this->page($req, 'dashboard', 'Tableau de bord', function (AuthUser $u): array {
-            $ids = $this->perms->readableCalendarIds($u);
-            return ['counts' => $this->stats->counts($ids, $u->timezone), 'calendarCount' => count($ids)];
-        }, 'pages/dashboard');
+        return $this->page($req, 'dashboard', 'Tableau de bord', fn (AuthUser $u): array => ['calendarCount' => count($this->perms->readableCalendarIds($u)),
+            'periods' => DashboardService::PERIODS, 'canCreate' => $u->can('appointments.write')], 'pages/dashboard', ['dashboard' => true]);
     }
 
     public function calendar(Request $req): Response
@@ -147,7 +146,7 @@ final class PageController
         return View::render('layout', $extra + [
             'user' => $u, 'csrf' => $ctx['csrf'], 'nav' => Navigation::visibleTo($u), 'current' => $navKey, 'title' => $title,
             'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
-            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
+            'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'dashboard' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
             'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
             'syncCursor' => $this->sync?->maxId() ?? 0, 'syncAccess' => $this->perms->accessToken($u),
             'defaultReminder' => (string) ($this->settings?->notifications($u->id)['default_reminder'] ?? ''), 'syncInterval' => (int) Config::get('app.sync.interval', 30),

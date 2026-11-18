@@ -5,7 +5,10 @@ use App\Controllers\AuthController;
 use App\Controllers\AppointmentApiController;
 use App\Controllers\CalendarApiController;
 use App\Controllers\CategoryApiController;
+use App\Controllers\DashboardApiController;
 use App\Controllers\EmailApiController;
+use App\Repositories\StatsRepository;
+use App\Services\DashboardService;
 use App\Controllers\NotificationApiController;
 use App\Controllers\PushApiController;
 use App\Repositories\PushSubscriptionRepository;
@@ -93,6 +96,11 @@ return static function (Router $r, ?\PDO $injected = null): void {
         return new EmailApiController($guard, $pdo, new AuditLogger($pdo));
     };
     $r->add('POST', '/api/v1/email/test', static fn (Request $q) => $email()->test($q));
+    $dash = static function () use ($deps): DashboardApiController {
+        [$pdo, $guard, $perms] = $deps();
+        return new DashboardApiController($guard, new DashboardService($pdo, $perms, new AppointmentRepository($pdo), new StatsRepository($pdo), new NotificationRepository($pdo)));
+    };
+    $r->add('GET', '/api/v1/dashboard', static fn (Request $q) => $dash()->show($q));
     $r->add('GET', '/api/v1/push/config', static fn (Request $q) => $push()->config($q));
     $r->add('POST', '/api/v1/push/subscribe', static fn (Request $q) => $push()->subscribe($q));
     $r->add('POST', '/api/v1/push/unsubscribe', static fn (Request $q) => $push()->unsubscribe($q));
