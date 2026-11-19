@@ -13,6 +13,12 @@ final class Router
         $this->routes[] = [strtoupper($method), $pattern, $handler];
     }
 
+    /** @return list<array{0:string,1:string}> [méthode, motif] de chaque route (inventaire pour les tests de sécurité) */
+    public function routes(): array
+    {
+        return array_map(static fn (array $r) => [$r[0], $r[1]], $this->routes);
+    }
+
     public function dispatch(Request $req): Response
     {
         $methodMismatch = false;

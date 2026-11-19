@@ -90,13 +90,14 @@ const T = 9000; // délai maximal d'attente d'un cycle de synchronisation
   check(true, '« Recharger sa version » recharge les valeurs du serveur');
   await a2.keyboard.press('Escape');
 
-  // 9. liste et contacts en direct, bannière du tableau de bord
+  // 9. liste et contacts en direct, compteurs du tableau de bord
   await a2.goto(BASE + '/contacts'); await a2.waitForSelector('#manage-results .empty, #manage-results .tbl');
   await call(a1, 'POST', '/api/v1/contacts', { last_name: 'Apparu en direct' });
   await a2.waitForSelector('#manage-results td:has-text("Apparu en direct")', { timeout: T }); check(true, 'page Contacts : nouveau contact (autre onglet) visible sans recharger');
-  await bp.goto(BASE + '/'); await bp.waitForSelector('[data-sync-banner]', { state: 'attached' });
-  await call(a1, 'POST', '/api/v1/appointments', { calendar_id: 2, title: 'Pour la bannière', start: '2026-11-22T10:00:00Z', end: '2026-11-22T11:00:00Z' });
-  await bp.waitForSelector('.sync-banner:not([hidden])', { timeout: T }); check(true, 'tableau de bord : bannière « modifications effectuées »');
+  await bp.goto(BASE + '/'); await bp.waitForFunction(() => document.querySelector('[data-k="total"]').textContent !== '–');
+  const total = () => bp.evaluate(() => parseInt(document.querySelector('[data-k="total"]').textContent, 10)), dashBefore = await total();
+  await call(a1, 'POST', '/api/v1/appointments', { calendar_id: 2, title: 'Pour le tableau de bord', start: '2026-11-22T10:00:00Z', end: '2026-11-22T11:00:00Z' });
+  await bp.waitForFunction((n) => parseInt(document.querySelector('[data-k="total"]').textContent, 10) === n + 1, dashBefore, { timeout: T }); check(true, 'tableau de bord : les compteurs se mettent à jour seuls');
 
   check(problems.length === 0, 'aucune erreur console / CSP ' + JSON.stringify(problems));
   await b.close(); process.exit(failed ? 1 : 0);

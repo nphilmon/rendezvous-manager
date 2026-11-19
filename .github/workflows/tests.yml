@@ -1,0 +1,34 @@
+# Intégration continue : tests PHP (unitaires, intégration, sécurité) puis tests navigateur Playwright.
+# La base de test est un MariaDB installé sur la machine du runner (pas de conteneur).
+# NB : ce workflow n'a pas pu être exécuté lors de son écriture ; les mêmes commandes ont été lancées à la main.
+name: tests
+on: [push, pull_request]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_NAME: rendezvous_manager_test
+      TEST_DB_USER: rvmtest
+      TEST_DB_PASSWORD: rvmtest_pw
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, mbstring, zip, curl, openssl, sodium, intl
+      - name: MariaDB
+        run: |
+          sudo apt-get update && sudo apt-get install -y mariadb-server
+          sudo systemctl start mariadb
+          sudo mariadb -e "CREATE DATABASE rendezvous_manager_test; CREATE USER 'rvmtest'@'%' IDENTIFIED BY 'rvmtest_pw'; GRANT ALL ON rendezvous_manager_test.* TO 'rvmtest'@'%'; CREATE USER 'rvmtest'@'localhost' IDENTIFIED BY 'rvmtest_pw'; GRANT ALL ON rendezvous_manager_test.* TO 'rvmtest'@'localhost';"
+      - name: Tests PHP
+        run: php tests/run.php
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Tests navigateur
+        run: |
+          npm install -g playwright
+          npx playwright install --with-deps chromium
+          NODE_PATH="$(npm root -g)" tests/e2e/run_all.sh

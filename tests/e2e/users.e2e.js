@@ -32,7 +32,7 @@ const closed = (p, sel) => p.waitForSelector(sel + ':not([open])', { state: 'att
   await p.click('.manage-dialog .af-actions >> text=Enregistrer'); await p.waitForSelector('.secret');
   const pw = (await p.textContent('.secret')).trim();
   check(pw.length === 16, 'mot de passe provisoire affiché (16 caractères)');
-  await p.click('.manage-dialog .af-actions >> text=Fermer'); await closed(p, '.manage-dialog');
+  await p.click('.manage-dialog .af-actions >> text=Fermer'); await p.waitForSelector('.secret', { state: 'detached' });
   await p.waitForSelector('.secret', { state: 'detached' });
   check(!(await p.content()).includes(pw), 'le mot de passe ne reste pas dans la page');
   await p.waitForSelector('#users-results tr:has-text("carole")');
@@ -61,7 +61,7 @@ const closed = (p, sel) => p.waitForSelector(sel + ':not([open])', { state: 'att
   await login(cp, 'carole', 'Nouveau-Secret-42'); await cp.waitForSelector('#login-error:not([hidden])'); check(true, 'compte désactivé : connexion refusée');
   await p.click('button[aria-label="Activer : carole"]'); await p.waitForSelector('#users-results tr:has-text("carole") .badge-s.ok');
   await p.click('button[aria-label="Mot de passe : carole"]'); await p.waitForSelector('.secret'); const pw2 = (await p.textContent('.secret')).trim();
-  await p.click('.manage-dialog .af-actions >> text=Fermer'); await closed(p, '.manage-dialog');
+  await p.click('.manage-dialog .af-actions >> text=Fermer'); await p.waitForSelector('.secret', { state: 'detached' });
   await login(cp, 'carole', pw2); await cp.waitForURL(/\/$|\/settings/); check(pw2 !== pw, 'réinitialisation : le nouveau mot de passe provisoire fonctionne');
 
   // filtres

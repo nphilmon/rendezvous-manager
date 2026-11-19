@@ -122,51 +122,51 @@ final class AppointmentApiController
 
     public function store(Request $req): Response
     {
-        $ctx = $this->guard->require($req);
+        $ctx = $this->guard->requirePermission($req, 'appointments.write');
         return Response::json(['data' => $this->service->create($ctx['user'], $req->json(), $req->ip)], 201);
     }
 
     public function update(Request $req, array $p): Response
     {
-        $ctx = $this->guard->require($req);
+        $ctx = $this->guard->requirePermission($req, 'appointments.write');
         return Response::json(['data' => $this->service->update($ctx['user'], self::id($p), $req->json(), $req->ip)]);
     }
 
     public function destroy(Request $req, array $p): Response
     {
-        $ctx = $this->guard->require($req);
+        $ctx = $this->guard->requirePermission($req, 'appointments.delete');
         $this->service->delete($ctx['user'], self::id($p), $req->json(), $req->ip);
         return Response::json(['ok' => true]);
     }
 
     public function restore(Request $req, array $p): Response
     {
-        $ctx = $this->guard->require($req);
+        $ctx = $this->guard->requirePermission($req, 'appointments.delete');
         return Response::json(['data' => $this->service->restore($ctx['user'], self::id($p), $req->ip)]);
     }
 
     public function duplicate(Request $req, array $p): Response
     {
-        $ctx = $this->guard->require($req);
+        $ctx = $this->guard->requirePermission($req, 'appointments.write');
         $occ = $req->json()['occurrence'] ?? null;
         return Response::json(['data' => $this->service->duplicate($ctx['user'], self::id($p), $req->ip, is_string($occ) ? $occ : null)], 201);
     }
 
     public function cancel(Request $req, array $p): Response
     {
-        $ctx = $this->guard->require($req);
+        $ctx = $this->guard->requirePermission($req, 'appointments.write');
         return Response::json(['data' => $this->service->cancel($ctx['user'], self::id($p), $req->json(), $req->ip)]);
     }
 
     public function complete(Request $req, array $p): Response
     {
-        $ctx = $this->guard->require($req);
+        $ctx = $this->guard->requirePermission($req, 'appointments.write');
         return Response::json(['data' => $this->service->complete($ctx['user'], self::id($p), $req->json(), $req->ip)]);
     }
 
     public function reschedule(Request $req, array $p): Response
     {
-        $ctx = $this->guard->require($req);
+        $ctx = $this->guard->requirePermission($req, 'appointments.write');
         return Response::json(['data' => $this->service->reschedule($ctx['user'], self::id($p), $req->json(), $req->ip)]);
     }
 
