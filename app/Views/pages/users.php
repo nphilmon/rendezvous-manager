@@ -1,5 +1,5 @@
 <h1>Utilisateurs</h1>
-<div id="users" data-me="<?= (int) $me ?>">
+<div id="users" data-me="<?= (int) $me ?>" data-default-tz="<?= $e($defaultTz) ?>">
   <p class="muted">Créez et gérez les comptes. Un compte n'est jamais supprimé : il est désactivé, et ses calendriers et rendez-vous sont conservés.</p>
   <div class="manage-toolbar" id="users-toolbar">
     <form class="search-inline" id="users-filter" role="search">

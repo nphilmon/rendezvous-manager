@@ -1,5 +1,5 @@
 <main class="auth-card" id="main">
-<div class="brand brand-lg"><svg class="logo" aria-hidden="true"><use href="/assets/icons/logo.svg#logo"/></svg><span>RendezVous Manager</span></div>
+<div class="brand brand-lg"><svg class="logo" aria-hidden="true"><use href="/assets/icons/logo.svg#logo"/></svg><span><?= $e($appName ?? "RendezVous Manager") ?></span></div>
 <h1>Connexion</h1>
 <form id="login-form" method="post" action="/login" novalidate data-next="<?= $e($next) ?>">
 <div class="alert alert-error" id="login-error" role="alert" hidden></div>

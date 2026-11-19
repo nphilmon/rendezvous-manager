@@ -8,7 +8,7 @@ const check = (ok, msg) => { console.log((ok ? '  ok    ' : '  FAIL  ') + msg); 
 async function login(page, user, pw = 'Correct-Horse-9') {
   await page.goto(BASE + '/login'); await page.fill('#identifier', user); await page.fill('#password', pw); await page.click('#login-submit');
 }
-const closed = (p, sel) => p.waitForSelector(sel + ':not([open])', { state: 'attached' });
+const closed = (p, sel) => p.waitForFunction((q) => !document.querySelector(q + '[open]'), sel);
 
 (async () => {
   const b = await chromium.launch(); const problems = [];

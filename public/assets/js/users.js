@@ -78,7 +78,7 @@
   }
 
   function roleOptions() { return roles.map(function (r) { return [r.code, r.label]; }); }
-  var TZ = (document.querySelector('meta[name="user-tz"]') || {}).content || 'Europe/Paris';
+  var TZ = root.dataset.defaultTz || (document.querySelector('meta[name="user-tz"]') || {}).content || 'Europe/Paris';
 
   function edit(u) {
     var self = u && u.id === me;

@@ -271,7 +271,7 @@ final class UserAdminService
         if (!is_string($role) || !in_array($role, $roles, true)) {
             $e['role'][] = 'Rôle invalide (' . implode(', ', $roles) . ').';
         }
-        $tz = $in['timezone'] ?? 'Europe/Paris';
+        $tz = $in['timezone'] ?? (new \App\Repositories\SettingsRepository($this->pdo))->global()['default_timezone'];
         if (!is_string($tz) || !in_array($tz, DateTimeZone::listIdentifiers(), true)) {
             $e['timezone'][] = 'Fuseau horaire invalide.';
         }

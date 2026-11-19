@@ -2,24 +2,30 @@
 <?php if ($user->mustChangePassword): ?>
 <div class="alert alert-error" role="alert">Votre mot de passe a été défini par un administrateur : choisissez-en un nouveau pour continuer à utiliser l'application.</div>
 <?php endif; ?>
-<section class="panel" aria-labelledby="h-theme">
-  <h2 id="h-theme">Affichage</h2>
-  <p class="muted small">Ce réglage est enregistré dans ce navigateur uniquement. Les préférences enregistrées sur le serveur (langue, fuseau, calendrier) arrivent avec la phase 21.</p>
-  <label for="theme-select">Thème</label>
-  <select id="theme-select">
-    <option value="auto">Automatique (selon le système)</option>
-    <option value="light">Clair</option>
-    <option value="dark">Sombre</option>
-  </select>
-</section>
 <section class="panel" aria-labelledby="h-account">
-  <h2 id="h-account">Compte</h2>
+  <h2 id="h-account">Profil</h2>
+  <form id="profile-form" class="tr-form" novalidate>
+    <div class="alert" id="profile-msg" role="status" hidden></div>
+    <label>Prénom <input id="pf-first" maxlength="80" required autocomplete="given-name"></label>
+    <label>Nom <input id="pf-last" maxlength="80" required autocomplete="family-name"></label>
+    <label>Fuseau horaire <input id="pf-tz" list="tz-list" maxlength="64" required autocomplete="off"></label>
+    <datalist id="tz-list"></datalist>
+    <div><button class="btn btn-primary" type="submit">Enregistrer le profil</button></div>
+  </form>
   <dl class="kv">
-    <dt>Nom</dt><dd><?= $e($user->firstName . ' ' . $user->lastName) ?></dd>
     <dt>Identifiant</dt><dd><?= $e($user->username) ?></dd>
     <dt>Adresse e-mail</dt><dd><?= $e($user->email) ?></dd>
-    <dt>Fuseau horaire</dt><dd><?= $e($user->timezone) ?></dd>
   </dl>
+  <p class="muted small">L'identifiant et l'adresse e-mail sont modifiés par un administrateur. Changer de fuseau horaire modifie l'affichage de tous vos rendez-vous (les heures enregistrées ne changent pas).</p>
+</section>
+<section class="panel" aria-labelledby="h-theme">
+  <h2 id="h-theme">Affichage et calendrier</h2>
+  <p class="muted small">Enregistré sur le serveur : vous retrouvez ces préférences sur tous vos appareils. Valeurs par défaut de l'organisation si vous n'en avez pas choisi.</p>
+  <form id="ui-form" class="tr-form" novalidate>
+    <div class="alert" id="ui-msg" role="status" hidden></div>
+    <div id="ui-fields" class="tr-filters"></div>
+    <div><button class="btn btn-primary" type="submit">Enregistrer l'affichage</button></div>
+  </form>
 </section>
 <section class="panel" aria-labelledby="h-pw">
   <h2 id="h-pw">Changer le mot de passe</h2>
@@ -80,5 +86,19 @@
   <button class="btn" type="button" id="email-test">Envoyer un e-mail de test</button>
   <p class="small" id="email-status" role="status"></p>
 </section>
+<?php if (!empty($canAdmin)): ?>
+<section class="panel" aria-labelledby="h-org">
+  <h2 id="h-org">Organisation (administrateur)</h2>
+  <p class="muted small">Réglages communs à tous les utilisateurs. Les préférences d'affichage ci-dessous servent de valeurs par défaut à ceux qui n'ont rien choisi.</p>
+  <form id="org-form" class="tr-form" novalidate>
+    <div class="alert" id="org-msg" role="status" hidden></div>
+    <label>Nom affiché (titre, en-tête, connexion) <input id="org-name" maxlength="80" placeholder="RendezVous Manager"></label>
+    <label>Fuseau horaire par défaut des nouveaux comptes <input id="org-tz" list="tz-list" maxlength="64" autocomplete="off"></label>
+    <div id="org-fields" class="tr-filters"></div>
+    <div><button class="btn btn-primary" type="submit">Enregistrer l'organisation</button></div>
+  </form>
+</section>
+<?php endif; ?>
+<script src="/assets/js/prefs.js" defer></script>
 <script src="/assets/js/settings.js" defer></script>
 <script src="/assets/js/push.js" defer></script>

@@ -14,10 +14,14 @@
   var PRIORITY = { low: 'Basse', normal: 'Normale', high: 'Haute', urgent: 'Urgente' };
   var DEFAULTS = { startHour: 0, endHour: 24, step: 30, weekStart: 1, weekend: true, hour12: false };
 
-  // ---- Réglages d'affichage (navigateur ; l'enregistrement serveur viendra avec la phase 21) -------------
+  // ---- Réglages d'affichage : enregistrés sur le serveur (window.RVM.ui), identiques sur tous les appareils -------------
   function load(key, fallback) { try { var v = JSON.parse(localStorage.getItem(key)); return v === null ? fallback : v; } catch (e) { return fallback; } }
   function save(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
-  var settings = Object.assign({}, DEFAULTS, load('rvm_cal_settings', {}));
+  function fromServer() {
+    var u = window.RVM.ui || {};
+    return { startHour: u.start_hour, endHour: u.end_hour, step: u.step, weekStart: u.week_start, weekend: u.weekend, hour12: u.hour12 };
+  }
+  var settings = Object.assign({}, DEFAULTS, fromServer());
   function sanitize() {
     settings.startHour = Math.min(23, Math.max(0, parseInt(settings.startHour, 10) || 0));
     settings.endHour = Math.min(24, Math.max(settings.startHour + 1, parseInt(settings.endHour, 10) || 24));
@@ -569,7 +573,7 @@
       if (!canCreate() || e.target.closest('.ev') || e.detail === 0) return;
       if (col.dataset.dragged === '1') return;
       var m = minutesAt(col, e.clientY, false);
-      openCreate(day + m * 60000, day + Math.min(m + 60, settings.endHour * 60) * 60000, false);
+      openCreate(day + m * 60000, day + Math.min(m + ((window.RVM.ui && window.RVM.ui.default_duration) || 60), settings.endHour * 60) * 60000, false);
     });
   }
   document.addEventListener('keydown', function (e) {
@@ -595,13 +599,14 @@
     var fWs = field('Premier jour de la semaine', select([[1, 'Lundi'], [0, 'Dimanche']], settings.weekStart));
     var fFmt = field('Format de l\'heure', select([['24', '24 heures'], ['12', '12 heures']], settings.hour12 ? '12' : '24'));
     var wl = el('label', 'check'), cb = el('input'); cb.type = 'checkbox'; cb.checked = settings.weekend; wl.append(cb, document.createTextNode(' Afficher le week-end')); pop.appendChild(wl);
-    pop.appendChild(el('p', 'muted small', 'Fuseau horaire : ' + TZ + '. Ces réglages sont enregistrés dans ce navigateur. Raccourcis : c nouveau, t aujourd\'hui, j/k suivant/précédent, d/w/m/a vues.'));
+    pop.appendChild(el('p', 'muted small', 'Fuseau horaire : ' + TZ + '. Ces réglages sont enregistrés sur le serveur (tous vos appareils) ; autres préférences : page Paramètres. Raccourcis : c nouveau, t aujourd\'hui, j/k suivant/précédent, d/w/m/a vues.'));
     var msg = el('p', 'pop-msg'); msg.setAttribute('role', 'alert'); pop.appendChild(msg);
     function apply() {
       msg.textContent = '';
       if (+fEnd.value <= +fStart.value) { msg.textContent = 'La fin doit être postérieure au début.'; return; }
       settings = { startHour: +fStart.value, endHour: +fEnd.value, step: +fStep.value, weekStart: +fWs.value, weekend: cb.checked, hour12: fFmt.value === '12' };
-      sanitize(); save('rvm_cal_settings', settings); document.getElementById('cal-grid').dataset.keep = '0';
+      sanitize();
+      window.RVM.saveUi({ start_hour: settings.startHour, end_hour: settings.endHour, step: settings.step, week_start: settings.weekStart, weekend: settings.weekend, hour12: settings.hour12 }).then(function (r) { if (!r.ok) msg.textContent = 'Enregistrement impossible sur le serveur.'; }); document.getElementById('cal-grid').dataset.keep = '0';
       if (window.RVM.miniCal) window.RVM.miniCal.redraw();
       refresh();
     }

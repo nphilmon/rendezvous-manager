@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr"<?= $ui['theme'] !== 'auto' ? ' data-theme="' . $e($ui['theme']) . '" data-theme-server="1"' : ' data-theme-server="1"' ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,6 +10,7 @@
 <meta name="sync-access" content="<?= $e($syncAccess) ?>">
 <meta name="default-reminder" content="<?= $e($defaultReminder) ?>">
 <meta name="sync-interval" content="<?= (int) $syncInterval ?>">
+<meta name="ui-settings" content="<?= $e(json_encode($ui + ['stored' => $uiStored], JSON_UNESCAPED_UNICODE)) ?>">
 <title><?= $e($title) ?> – <?= $e($appName) ?></title>
 <link rel="icon" href="/assets/icons/logo.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -23,7 +24,7 @@
 
 <header class="topbar">
   <button class="icon-btn only-mobile" id="sidebar-toggle" aria-label="Ouvrir le menu" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button>
-  <a class="brand" href="/"><svg class="logo" aria-hidden="true"><use href="/assets/icons/logo.svg#logo"/></svg><span class="hide-sm">RendezVous Manager</span></a>
+  <a class="brand" href="/"><svg class="logo" aria-hidden="true"><use href="/assets/icons/logo.svg#logo"/></svg><span class="hide-sm"><?= $e($appName) ?></span></a>
 
   <?php if ($calendarNav): ?>
   <div class="cal-nav" id="cal-nav" data-view="<?= $e($view) ?>" data-date="<?= $e($date) ?>">

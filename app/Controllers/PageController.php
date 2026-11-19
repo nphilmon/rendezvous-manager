@@ -54,7 +54,7 @@ final class PageController
         if ($this->session($req) !== null) {
             return Response::redirect($next);
         }
-        return Response::html(View::render('login', ['next' => $next, 'title' => 'Connexion', 'appName' => Config::get('app.name')], 'bare'));
+        return Response::html(View::render('login', ['next' => $next, 'title' => 'Connexion', 'appName' => $this->orgName()], 'bare'));
     }
 
     public function dashboard(Request $req): Response
@@ -65,7 +65,11 @@ final class PageController
 
     public function calendar(Request $req): Response
     {
-        $view = $req->query['view'] ?? 'week';
+        $default = 'week';
+        if ($this->settings !== null && ($ctx = $this->session($req)) !== null) {
+            $default = (string) $this->settings->ui($ctx['user']->id)['view'];
+        }
+        $view = $req->query['view'] ?? $default;
         $view = is_string($view) && isset(self::VIEWS[$view]) ? $view : 'week';
         $date = $req->query['date'] ?? '';
         $date = is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) && strtotime($date) !== false
@@ -106,7 +110,7 @@ final class PageController
     /** Administration des utilisateurs (users.js) : droit « users.manage » vérifié par la navigation et par l'API. */
     public function users(Request $req): Response
     {
-        return $this->page($req, 'users', 'Utilisateurs', fn (AuthUser $u) => ['me' => $u->id], 'pages/users', ['usersAdmin' => true]);
+        return $this->page($req, 'users', 'Utilisateurs', fn (AuthUser $u) => ['me' => $u->id, 'defaultTz' => (string) ($this->settings?->global()['default_timezone'] ?? $u->timezone)], 'pages/users', ['usersAdmin' => true]);
     }
 
     /** Import / export (transfer.js) : l'import n'est proposé qu'avec le droit « data.import ». */
@@ -125,7 +129,7 @@ final class PageController
 
     public function settings(Request $req): Response
     {
-        return $this->page($req, 'settings', 'Paramètres', fn (AuthUser $u) => [], 'pages/settings');
+        return $this->page($req, 'settings', 'Paramètres', fn (AuthUser $u) => ['canAdmin' => $u->can('settings.admin')], 'pages/settings');
     }
 
     public function notFound(Request $req): Response
@@ -164,6 +168,13 @@ final class PageController
         return Response::html($this->shell($ctx, $navKey, $title, View::render($view, $d + ['user' => $u, 'title' => $title], null), $layoutData));
     }
 
+    /** Nom affiché : réglage de l'organisation, sinon nom de l'application. */
+    private function orgName(): string
+    {
+        $n = $this->settings?->global()['org_name'] ?? '';
+        return $n !== '' ? (string) $n : (string) Config::get('app.name');
+    }
+
     /**
      * @param array{user:AuthUser,csrf:string,session_id:string} $ctx
      * @param array<string,mixed> $extra
@@ -171,9 +182,11 @@ final class PageController
     private function shell(array $ctx, string $navKey, string $title, string $content, array $extra): string
     {
         $u = $ctx['user'];
+        $ui = $this->settings?->ui($u->id) ?? SettingsRepository::UI_DEFAULTS;
         return View::render('layout', $extra + [
+            'ui' => $ui, 'uiStored' => $this->settings?->hasStoredUi($u->id) ?? true, 'orgName' => $this->orgName(),
             'user' => $u, 'csrf' => $ctx['csrf'], 'nav' => Navigation::visibleTo($u), 'current' => $navKey, 'title' => $title,
-            'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => Config::get('app.name'),
+            'content' => $content, 'unread' => $this->stats->unreadNotifications($u->id), 'appName' => $this->orgName(),
             'version' => Config::get('app.version'), 'calendarNav' => false, 'manage' => false, 'dashboard' => false, 'transfer' => false, 'usersAdmin' => false, 'historyPage' => false, 'backupsPage' => false, 'view' => 'week', 'date' => '', 'views' => self::VIEWS,
             'canCreate' => $u->can('appointments.write'), 'tz' => $u->timezone,
             'syncCursor' => $this->sync?->maxId() ?? 0, 'syncAccess' => $this->perms->accessToken($u),

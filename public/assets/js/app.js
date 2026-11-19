@@ -22,10 +22,44 @@
       });
   };
 
+  // ---- Préférences d'affichage : source = serveur (meta ui-settings), partagées par tous les appareils ----------
+  var serverUi = document.documentElement.getAttribute('data-theme-server') === '1';
+  var ui = null; try { ui = JSON.parse(($('meta[name="ui-settings"]') || {}).content); } catch (e) { ui = null; }
+  window.RVM.ui = ui;
+  /** Enregistre un sous-ensemble de réglages sur le serveur et met à jour window.RVM.ui. */
+  window.RVM.saveUi = function (patch) {
+    Object.assign(window.RVM.ui || (window.RVM.ui = {}), patch);
+    return window.RVM.api('PUT', '/api/v1/settings', { ui: patch }).then(function (r) {
+      if (r.ok) { Object.assign(window.RVM.ui, r.data.ui, { stored: true }); document.dispatchEvent(new CustomEvent('rvm:ui')); }
+      return r;
+    });
+  };
+  // Reprise unique des anciens réglages du navigateur (phases 6 à 20) tant que le serveur n'en a aucun
+  if (serverUi && ui && ui.stored === false) {
+    var legacy = {}, ls = null;
+    try { ls = JSON.parse(localStorage.getItem('rvm_cal_settings')); } catch (e) { ls = null; }
+    if (ls && typeof ls === 'object') {
+      var map = { startHour: 'start_hour', endHour: 'end_hour', step: 'step', weekStart: 'week_start', weekend: 'weekend', hour12: 'hour12' };
+      Object.keys(map).forEach(function (k) { if (ls[k] !== undefined) legacy[map[k]] = ls[k]; });
+    }
+    try { var lt = localStorage.getItem('rvm_theme'); if (lt === 'light' || lt === 'dark') legacy.theme = lt; } catch (e) {}
+    if (Object.keys(legacy).length) {
+      Object.assign(ui, legacy);
+      window.RVM.saveUi(legacy).then(function (r) {
+        if (r.ok) { try { localStorage.removeItem('rvm_cal_settings'); } catch (e) {} }
+        else Object.keys(legacy).forEach(function () { /* conservé dans le navigateur : nouvel essai à la prochaine page */ });
+      });
+    } else ui.stored = true;
+  }
+
   // ---- Thème -----------------------------------------------------------
-  function getTheme() { try { return localStorage.getItem('rvm_theme') || 'auto'; } catch (e) { return 'auto'; } }
-  function setTheme(t) {
+  function getTheme() {
+    if (serverUi && ui) return ui.theme || 'auto';
+    try { return localStorage.getItem('rvm_theme') || 'auto'; } catch (e) { return 'auto'; }
+  }
+  function setTheme(t, persist) {
     try { localStorage.setItem('rvm_theme', t); } catch (e) {}
+    if (persist && serverUi && ui && ui.theme !== t) window.RVM.saveUi({ theme: t });
     if (t === 'auto') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', t);
     var l = $('#theme-label'); if (l) l.textContent = { auto: 'auto', light: 'clair', dark: 'sombre' }[t];
@@ -34,10 +68,10 @@
   setTheme(getTheme());
   var tt = $('#theme-toggle');
   if (tt) tt.addEventListener('click', function () {
-    var order = ['auto', 'light', 'dark']; setTheme(order[(order.indexOf(getTheme()) + 1) % 3]);
+    var order = ['auto', 'light', 'dark']; setTheme(order[(order.indexOf(getTheme()) + 1) % 3], true);
   });
   var ts = $('#theme-select');
-  if (ts) ts.addEventListener('change', function () { setTheme(ts.value); });
+  if (ts) ts.addEventListener('change', function () { setTheme(ts.value, true); });
 
   // ---- Menu utilisateur --------------------------------------------------
   var mb = $('#user-menu-btn'), menu = $('#user-menu');
@@ -88,7 +122,7 @@
       var o = {}; new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).forEach(function (p) { o[p.type] = +p.value; });
       return new Date(Date.UTC(o.year, o.month - 1, o.day));
     };
-    var weekStart = function () { try { return JSON.parse(localStorage.getItem('rvm_cal_settings')).weekStart === 0 ? 0 : 1; } catch (e) { return 1; } };
+    var weekStart = function () { return window.RVM.ui && window.RVM.ui.week_start === 0 ? 0 : 1; };
     var selected = parse(mc.dataset.date), today = nowInTz();
     var cursor = new Date(Date.UTC((selected || today).getUTCFullYear(), (selected || today).getUTCMonth(), 1));
     var view = mc.dataset.view || 'week';

@@ -95,8 +95,10 @@ Statuts : `scheduled`, `confirmed`, `tentative`, `completed`, `cancelled`. Prior
 | `POST /api/v1/notifications/read-all` | session | tout marquer lu |
 | `POST /api/v1/notifications/{id}/read` | session | marquer lue (ses propres notifications) |
 | `POST /api/v1/notifications/{id}/unread` | session | marquer non lue |
-| `GET /api/v1/settings` | session | réglages de notification de l'utilisateur |
-| `PUT /api/v1/settings` | session | modification de ces réglages |
+| `GET /api/v1/settings` | session | réglages de l'utilisateur : notifications, affichage (valeurs effectives : défauts < organisation < utilisateur), profil |
+| `PUT /api/v1/settings` | session | modification : `{notifications?, ui?, profile?}` (au moins un groupe, validés ensemble, rien n'est écrit si l'un est invalide). `ui` = préférences d'affichage (`theme`, `view`, `week_start`, `start_hour`, `end_hour`, `step`, `weekend`, `hour12`, `default_duration`, `default_calendar`) ; `profile` = `first_name`, `last_name`, `timezone` (jamais l'identifiant, l'e-mail ni le rôle) |
+| `GET /api/v1/settings/global` | `settings.admin` | réglages de l'organisation : `global` (`org_name`, `default_timezone`) et `ui` (valeurs par défaut d'affichage) |
+| `PUT /api/v1/settings/global` | `settings.admin` | modification : `{global?, ui?}` ; journalisée |
 | `GET /api/v1/push/config` | session | clé publique VAPID et état du Web Push |
 | `POST /api/v1/push/subscribe` | session | enregistre l'abonnement du navigateur (URL contrôlée contre le SSRF) |
 | `POST /api/v1/push/unsubscribe` | session | supprime un abonnement |

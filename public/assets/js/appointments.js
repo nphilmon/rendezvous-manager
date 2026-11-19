@@ -324,7 +324,7 @@
       if (a.all_day) { sW = Date.parse(a.start); eW = Date.parse(a.end) - DAY; } else { sW = wall(Date.parse(a.start)); eW = wall(Date.parse(a.end)); }
     } else {
       var now = wall(Date.now()), base = opts.start !== undefined ? opts.start : Math.ceil(now / 3600000) * 3600000;
-      sW = base; eW = opts.end !== undefined ? opts.end : base + 3600000;
+      sW = base; eW = opts.end !== undefined ? opts.end : base + (((window.RVM.ui && window.RVM.ui.default_duration) || 60) * 60000);
       if (allDay) { sW = Math.floor(sW / DAY) * DAY; eW = sW; }
     }
     state = { id: a ? a.id : null, version: a ? a.version : null, duration: Math.max(eW - sW, 15 * 60000), allDay: allDay,
@@ -526,6 +526,8 @@
   }
 
   function lastCalendar(cals) {
+    var pref = window.RVM.ui && window.RVM.ui.default_calendar;
+    if (pref && cals.some(function (c) { return c.id === pref; })) return pref;
     var last = null; try { last = +localStorage.getItem('rvm_last_calendar'); } catch (e) {}
     return cals.some(function (c) { return c.id === last; }) ? last : cals[0].id;
   }
@@ -643,7 +645,7 @@
     var base = typeof window.RVM.calendarDate === 'function' ? window.RVM.calendarDate() : null, today = Math.floor(wall(Date.now()) / DAY) * DAY, start;
     if (base === null || base === today) start = Math.ceil(wall(Date.now()) / 3600000) * 3600000;
     else start = base + 9 * 3600000;
-    openForm(Object.assign({ start: start, end: start + 3600000 }, extra || {}));
+    openForm(Object.assign({ start: start, end: start + (((window.RVM.ui && window.RVM.ui.default_duration) || 60) * 60000) }, extra || {}));
   }
 
   window.RVM.appointments = { invalidate: function () { cache = {}; }, askScope: askScope, seriesBody: seriesBody, describeRule: describeRule, TZ: TZ, openForm: openForm, openNew: openNew, openDetails: openDetails, calendars: calendars, toast: toast,

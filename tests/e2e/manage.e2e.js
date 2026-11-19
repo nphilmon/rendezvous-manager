@@ -9,7 +9,7 @@ async function login(page, user) {
   await page.goto(BASE + '/login'); await page.fill('#identifier', user); await page.fill('#password', 'Correct-Horse-9');
   await page.click('#login-submit'); await page.waitForURL(BASE + '/');
 }
-const closed = (p, sel) => p.waitForSelector(sel + ':not([open])', { state: 'attached' });
+const closed = (p, sel) => p.waitForFunction((q) => !document.querySelector(q + '[open]'), sel);
 
 (async () => {
   const b = await chromium.launch(); const problems = [];
