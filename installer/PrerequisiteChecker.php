@@ -39,7 +39,7 @@ final class PrerequisiteChecker
             $has = extension_loaded($ext);
             $add("ext_$ext", "Extension $label", $has ? self::OK : self::MISSING, $has ? 'Chargée' : 'Non chargée', true);
         }
-        $add('ext_sodium', 'Extension sodium', extension_loaded('sodium') ? self::OK : self::OPTIONAL, 'Utile au chiffrement des sauvegardes');
+        $add('ext_sodium', 'Extension sodium', extension_loaded('sodium') ? self::OK : self::OPTIONAL, 'Facultatif (non utilisé actuellement)');
         $add('ext_curl', 'Extension curl', extension_loaded('curl') ? self::OK : self::OPTIONAL, 'Utile à l\'envoi Web Push');
         $add('ext_intl', 'Extension intl', extension_loaded('intl') ? self::OK : self::OPTIONAL, 'Utile aux formats de date localisés');
         $add('ext_zip', 'Extension zip', extension_loaded('zip') ? self::OK : self::OPTIONAL, 'Nécessaire à l\'export XLSX');
