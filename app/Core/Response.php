@@ -40,10 +40,19 @@ final class Response
         return new self($status, '', ['Location' => $to, 'Cache-Control' => 'no-store']);
     }
 
+    /** En-tête HSTS si la durée configurée est positive (HSTS_MAX_AGE). */
+    public static function hsts(int $maxAge): ?string
+    {
+        return $maxAge > 0 ? 'max-age=' . $maxAge : null;
+    }
+
     public function send(): void
     {
         http_response_code($this->status);
         header('X-Content-Type-Options: nosniff');
+        if (($h = self::hsts((int) Config::get('app.hsts_max_age', 0))) !== null) {
+            header('Strict-Transport-Security: ' . $h);
+        }
         foreach ($this->headers as $k => $v) {
             header($k . ': ' . $v);
         }

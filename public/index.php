@@ -37,6 +37,11 @@ $router = new Router();
 
 $req = Request::fromGlobals();
 
+if (\App\Core\MaintenanceMode::active(dirname(__DIR__) . '/storage/maintenance.lock')) {
+    \App\Core\MaintenanceMode::response(str_starts_with($req->path, '/api/'))->send();
+    exit;
+}
+
 use Installer\DatabaseSetup;
 use Installer\InstallationLock;
 use Installer\InstallerController;

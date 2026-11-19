@@ -12,5 +12,5 @@
 .DS_Store
 .idea/
 .vscode/
-/storage/sessions/
+/storage/sessions/*
 /storage/install.token

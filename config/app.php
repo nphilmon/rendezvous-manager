@@ -33,6 +33,9 @@ return [
     'audit'    => [
         'retention_days' => max(0, Env::int('AUDIT_RETENTION_DAYS', 0)), // 0 = conservation illimitée
     ],
+    // Strict-Transport-Security : durée en secondes (0 = non envoyé). À activer seulement quand HTTPS est définitivement en place :
+    // un navigateur qui l'a reçu refuse ensuite tout accès en HTTP pendant cette durée.
+    'hsts_max_age' => max(0, Env::int('HSTS_MAX_AGE', 0)),
     'paths'    => [
         'root'    => dirname(__DIR__),
         'storage' => dirname(__DIR__) . '/storage',

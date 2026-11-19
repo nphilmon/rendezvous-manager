@@ -1,15 +1,39 @@
+# Exemple nginx + PHP-FPM pour RendezVous Manager. Adaptez server_name, chemins, certificat et socket PHP-FPM.
+# Seul public/ est servi : .env, app/, config/, storage/, database/, scripts/… ne sont jamais accessibles.
+
+server {
+    listen 80;
+    server_name rendezvous.example.org;
+    return 301 https://$host$request_uri;          # HTTPS obligatoire
+}
+
 server {
     listen 443 ssl http2;
     server_name rendezvous.example.org;
-    root /var/www/rendezvous/public;   # uniquement public/
+    ssl_certificate     /etc/letsencrypt/live/rendezvous.example.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/rendezvous.example.org/privkey.pem;
+
+    root /var/www/rendezvous/public;               # uniquement public/
     index index.php;
+    client_max_body_size 4m;                        # imports : 2 Mo de contenu JSON, avec marge
+
+    # HSTS : à activer ici OU par HSTS_MAX_AGE dans .env (pas les deux). À n'activer qu'une fois HTTPS définitif.
+    # add_header Strict-Transport-Security "max-age=31536000" always;
 
     location / { try_files $uri /index.php?$query_string; }
+
     location ~ \.php$ {
-        try_files $uri =404;
+        # seul le contrôleur frontal est exécutable ; tout autre .php de public/ est refusé
+        if ($uri !~ "^/index\.php$") { return 404; }
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
     }
-    location ~ /\. { deny all; }
+
+    location ~ /\.            { deny all; }        # .env, .git, .htaccess…
+    location ~ ~$             { deny all; }        # fichiers de sauvegarde d'éditeur
+
+    # ressources statiques : cache modéré (le service worker doit rester à jour)
+    location /assets/         { expires 7d; add_header Cache-Control "public"; }
+    location = /service-worker.js { add_header Cache-Control "no-cache"; }
 }

@@ -67,6 +67,7 @@ L'assistant écrit les paramètres de la base ; le reste se règle à la main da
 | `DB_SSL_MODE` | `disabled`, `required` ou `verify` (certificat et identité vérifiés) | `verify` |
 | `DB_SSL_CA` | fichier d'autorité de certification (TLS `verify`) | vide |
 | `COOKIE_SECURE` | cookie de session réservé à HTTPS | `true` en production |
+| `HSTS_MAX_AGE` | durée de l'en-tête HSTS en secondes (0 = non envoyé) ; à activer une fois HTTPS définitif | `0` |
 | `SYNC_INTERVAL` | intervalle de synchronisation des navigateurs (secondes, 2 à 300) | `30` |
 | `MAIL_ENABLED`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_ENCRYPTION`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_CA_FILE` | e-mail SMTP facultatif (TLS vérifié, jamais de repli en clair) | désactivé |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push (clés générées par `php scripts/generate_vapid.php`) | vides |
@@ -94,6 +95,8 @@ Détails des notifications : `docs/notifications.md`. Contrôle de santé : `php
 
 ## 7. Mise à jour
 
+Raccourci recommandé : `scripts/update.sh` (maintenance, sauvegarde, code, migrations, contrôles) — voir `docs/deploiement.md`. Manuellement :
+
 ```bash
 git pull                      # ou « Mise à jour depuis le dépôt distant » dans cPanel
 php scripts/migrate.php       # applique les migrations en attente (idempotent)
@@ -109,6 +112,7 @@ Faites une sauvegarde avant (page **Sauvegardes**). Une migration déjà appliqu
 - [ ] Les trois tâches cron sont créées ; `php scripts/healthcheck.php` ne signale aucune erreur.
 - [ ] Une sauvegarde manuelle réussit (page Sauvegardes) et une copie est conservée **hors du serveur**.
 - [ ] `APP_ENV=production`, `APP_DEBUG=false`, `COOKIE_SECURE=true`.
+- [ ] `php scripts/deploy_check.php --url=https://votre-domaine` sans « ÉCHEC » (contrôle automatique de tout ce qui précède).
 
 ## 9. Dépannage
 
