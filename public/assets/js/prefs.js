@@ -21,6 +21,8 @@
       { k: 'start_hour', label: 'Début de la grille', opts: hrs(0, 23), num: true },
       { k: 'end_hour', label: 'Fin de la grille', opts: hrs(1, 24), num: true },
       { k: 'step', label: 'Pas horaire', opts: [[5, '5 minutes'], [10, '10 minutes'], [15, '15 minutes'], [30, '30 minutes'], [60, '60 minutes']], num: true },
+      { k: 'language', label: 'Langue des dates (noms des jours et des mois)', opts: [['fr', 'Français'], ['en', 'English']] },
+      { k: 'date_format', label: 'Format de date', opts: [['auto', 'Selon la langue'], ['dmy', 'JJ/MM/AAAA'], ['mdy', 'MM/JJ/AAAA'], ['ymd', 'AAAA-MM-JJ']] },
       { k: 'hour12', label: 'Format de l\'heure', opts: [['false', '24 heures'], ['true', '12 heures']], bool: true },
       { k: 'weekend', label: 'Week-end', opts: [['true', 'Afficher'], ['false', 'Masquer']], bool: true },
       { k: 'default_duration', label: 'Durée par défaut d\'un nouveau rendez-vous', opts: [[15, '15 minutes'], [30, '30 minutes'], [45, '45 minutes'], [60, '1 heure'], [90, '1 h 30'], [120, '2 heures'], [240, '4 heures']], num: true },

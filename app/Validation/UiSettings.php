@@ -9,6 +9,8 @@ final class UiSettings
     public const THEMES = ['auto', 'light', 'dark'];
     public const VIEWS = ['day', 'week', 'month', 'agenda'];
     public const STEPS = [5, 10, 15, 30, 60];
+    public const LANGUAGES = ['fr', 'en'];
+    public const DATE_FORMATS = ['auto', 'dmy', 'mdy', 'ymd'];
 
     /**
      * @param array<string,mixed> $in valeurs reçues ; $current : réglages effectifs actuels (pour contrôler début < fin)
@@ -41,6 +43,8 @@ final class UiSettings
         };
         $enum('theme', self::THEMES);
         $enum('view', self::VIEWS);
+        $enum('language', self::LANGUAGES);
+        $enum('date_format', self::DATE_FORMATS);
         $int('week_start', 0, 1);
         if (isset($out['week_start']) && !in_array($out['week_start'], [0, 1], true)) {
             unset($out['week_start']);

@@ -5,7 +5,7 @@
   if (!root) return;
   var api = window.RVM.api, results = document.getElementById('h-results'), pager = document.getElementById('h-pager');
   var TZ = (document.querySelector('meta[name="user-tz"]') || {}).content || 'UTC';
-  var fmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'medium', timeZone: TZ });
+  var fmt = window.RVM.dtf({ dateStyle: 'short', timeStyle: 'medium', timeZone: TZ });
   var state = { page: 1 };
   var FIELD = { title: 'Titre', location: 'Lieu', address: 'Adresse', status: 'Statut', priority: 'Priorité', start_utc: 'Début (UTC)', end_utc: 'Fin (UTC)', all_day: 'Journée entière', timezone: 'Fuseau',
     calendar_id: 'Calendrier', category_id: 'Catégorie', contact_id: 'Contact', color: 'Couleur', description: 'Description', notes: 'Notes' };

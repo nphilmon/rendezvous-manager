@@ -28,6 +28,8 @@ final class SettingsRepository
         'step' => 30,               // pas horaire en minutes : 5 | 10 | 15 | 30 | 60
         'weekend' => true,
         'hour12' => false,
+        'language' => 'fr',         // langue des noms de jours et de mois : fr | en (les textes de l'interface restent en français)
+        'date_format' => 'auto',    // auto (selon la langue) | dmy | mdy | ymd
         'default_duration' => 60,   // minutes, pour un nouveau rendez-vous
         'default_calendar' => null, // calendrier proposé par défaut (par utilisateur seulement)
         'hidden_calendars' => [],   // calendriers masqués dans la vue (par utilisateur seulement)

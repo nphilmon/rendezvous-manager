@@ -21,7 +21,7 @@
     if (live && ((s === 'offline' || s === 'error') || (s === 'ok' && (before === 'offline' || before === 'error')))) live.textContent = s === 'ok' ? 'Synchronisation rétablie.' : LABELS[s] + '.';
   }
   function stamp() {
-    var t = lastOk ? ' Dernière synchronisation : ' + new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(lastOk) + '.' : '';
+    var t = lastOk ? ' Dernière synchronisation : ' + window.RVM.dtf({ hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(lastOk) + '.' : '';
     btn.title = 'Actualiser maintenant.' + t;
   }
 

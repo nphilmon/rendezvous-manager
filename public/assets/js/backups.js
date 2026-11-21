@@ -5,7 +5,7 @@
   if (!root) return;
   var api = window.RVM.api, results = document.getElementById('b-results'), err = document.getElementById('b-err');
   var TZ = (document.querySelector('meta[name="user-tz"]') || {}).content || 'UTC';
-  var fmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'medium', timeZone: TZ });
+  var fmt = window.RVM.dtf({ dateStyle: 'short', timeStyle: 'medium', timeZone: TZ });
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
   function toast(t, bad) { window.RVM.appointments.toast(t, bad); }
   function msg(r, fb) { return (r.data && r.data.error && r.data.error.message) || fb; }

@@ -47,7 +47,7 @@
   function weekStartOf(w) { return w - ((new Date(w).getUTCDay() - settings.weekStart + 7) % 7) * DAY; }
   function monthStart(w) { var d = new Date(w); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1); }
 
-  var F = function (o) { o.timeZone = 'UTC'; return new Intl.DateTimeFormat('fr-FR', o); };
+  var F = function (o) { o.timeZone = 'UTC'; return window.RVM.dtf(o); };
   function fmtTime(w) { return F({ hour: settings.hour12 ? 'numeric' : '2-digit', minute: '2-digit', hour12: settings.hour12 }).format(w); }
   function fmtDay(w, o) { return F(o).format(w); }
 

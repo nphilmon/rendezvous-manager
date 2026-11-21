@@ -74,7 +74,7 @@ final class SettingsUiTest extends DatabaseTestCase
         $r = $this->call('alice', 'PUT', '/api/v1/settings', ['ui' => ['theme' => 'dark', 'view' => 'month', 'week_start' => 0, 'start_hour' => 8, 'end_hour' => 19, 'step' => 15, 'weekend' => false, 'hour12' => true, 'default_duration' => 45, 'default_calendar' => 1, 'hidden_calendars' => [2, 1, 2]]]);
         $this->assertSame(200, $r->status, $r->body);
         $ui = $this->j($r)['ui'];
-        $this->assertSame(['dark', 'month', 0, 8, 19, 15, false, true, 45, 1, [2, 1]], array_values($ui), 'doublons retirés dans la liste des calendriers masqués');
+        $this->assertSame(['dark', 'month', 0, 8, 19, 15, false, true, 'fr', 'auto', 45, 1, [2, 1]], array_values($ui), 'doublons retirés dans la liste des calendriers masqués');
         $this->assertSame(true, $this->j($r)['meta']['ui_stored']);
         $this->assertSame($ui, $this->j($this->call('alice', 'GET', '/api/v1/settings'))['ui'], 'relu depuis la base');
         $this->assertSame(SettingsRepository::UI_DEFAULTS, $this->j($this->call('bob', 'GET', '/api/v1/settings'))['ui'], 'propres à chaque utilisateur');
@@ -85,7 +85,7 @@ final class SettingsUiTest extends DatabaseTestCase
     public function testValidationIsStrictAndAtomic(): void
     {
         $bad = [['theme' => 'rose'], ['view' => 'year'], ['week_start' => 2], ['week_start' => '1'], ['start_hour' => -1], ['start_hour' => 24], ['end_hour' => 0], ['end_hour' => 25], ['step' => 7], ['step' => '30'],
-            ['weekend' => 'oui'], ['hour12' => 1], ['default_duration' => 4], ['default_duration' => 721], ['default_duration' => 'x'], ['colour' => 'red'],
+            ['weekend' => 'oui'], ['hour12' => 1], ['default_duration' => 4], ['default_duration' => 721], ['default_duration' => 'x'], ['colour' => 'red'], ['language' => 'de'], ['language' => 1], ['date_format' => 'dd/mm'], ['date_format' => null],
             ['start_hour' => 10, 'end_hour' => 10], ['hidden_calendars' => 'x'], ['hidden_calendars' => [0]], ['hidden_calendars' => [1.5]], ['hidden_calendars' => ['1']], ['hidden_calendars' => ['a' => 1]], ['hidden_calendars' => range(1, 201)], ['default_calendar' => 2], ['default_calendar' => 999], ['default_calendar' => 'a']];
         foreach ($bad as $b) {
             $r = $this->call('alice', 'PUT', '/api/v1/settings', ['ui' => $b]);
@@ -103,6 +103,18 @@ final class SettingsUiTest extends DatabaseTestCase
             $this->assertSame(422, $this->call('alice', 'PUT', '/api/v1/settings', $b)->status, json_encode($b));
         }
         $this->assertSame(0, (int) $this->pdo->query("SELECT COUNT(*) FROM settings WHERE user_id = 2 AND setting_key = 'ui.theme' AND setting_value = '\"rose\"'")->fetchColumn());
+    }
+
+    public function testLanguageAndDateFormatArePersistedPerUser(): void
+    {
+        $g = $this->j($this->call('alice', 'GET', '/api/v1/settings'))['ui'];
+        $this->assertSame(['fr', 'auto'], [$g['language'], $g['date_format']], 'valeurs par défaut');
+        $r = $this->call('alice', 'PUT', '/api/v1/settings', ['ui' => ['language' => 'en', 'date_format' => 'mdy']]);
+        $this->assertSame(200, $r->status, $r->body);
+        $a = $this->j($this->call('alice', 'GET', '/api/v1/settings'))['ui'];
+        $this->assertSame(['en', 'mdy'], [$a['language'], $a['date_format']]);
+        $b = $this->j($this->call('bob', 'GET', '/api/v1/settings'))['ui'];
+        $this->assertSame(['fr', 'auto'], [$b['language'], $b['date_format']], 'propres à chaque utilisateur');
     }
 
     public function testDefaultCalendarMustBeCreatableByTheUser(): void

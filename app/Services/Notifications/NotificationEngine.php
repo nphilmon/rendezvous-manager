@@ -220,7 +220,7 @@ final class NotificationEngine
         if (!$prefs['enabled']) {
             return null;
         }
-        [$t, $b] = NotificationText::make(['user_tz' => $a['user_tz'], 'start' => $start, 'all_day' => (bool) $a['all_day'], 'location' => $loc, 'offset_minutes' => (int) $a['offset_minutes'], 'title' => $title], $prefs['privacy']);
+        [$t, $b] = NotificationText::make(['user_tz' => $a['user_tz'], 'start' => $start, 'all_day' => (bool) $a['all_day'], 'location' => $loc, 'offset_minutes' => (int) $a['offset_minutes'], 'title' => $title], $prefs['privacy'], $this->settings->ui((int) $d['user_id']));
         return ['title' => $t, 'body' => $b];
     }
 

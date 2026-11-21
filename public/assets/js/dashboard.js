@@ -13,7 +13,7 @@
 
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
   function clear(n) { n.textContent = ''; }
-  function fmtDay(iso) { return new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z')); }
+  function fmtDay(iso) { return window.RVM.dtf({ weekday: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(iso + 'T00:00:00Z')); }
 
   function bars(host, items, unit) {
     clear(host);
@@ -60,8 +60,8 @@
     var card = el('div', 'next-card'), b = el('button', 'nt', a.title); b.type = 'button';
     b.addEventListener('click', function () { if (window.RVM.appointments) window.RVM.appointments.openDetails(a, null, b); });
     var when = a.all_day
-      ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeZone: 'UTC' }).format(new Date(a.start)) + ' (journée entière)'
-      : new Intl.DateTimeFormat('fr-FR', { dateStyle: 'full', timeStyle: 'short', timeZone: TZ }).format(new Date(a.start));
+      ? window.RVM.dtf({ dateStyle: 'full', timeZone: 'UTC' }).format(new Date(a.start)) + ' (journée entière)'
+      : window.RVM.dtf({ dateStyle: 'full', timeStyle: 'short', timeZone: TZ }).format(new Date(a.start));
     card.append(b, el('span', '', when));
     if (a.location) card.appendChild(el('span', 'muted', a.location));
     if (a.category) card.appendChild(el('span', 'muted small', 'Catégorie : ' + a.category.name));

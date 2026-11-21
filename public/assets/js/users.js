@@ -8,7 +8,7 @@
   var results = document.getElementById('users-results'), pager = document.getElementById('users-pager');
   var roles = [], state = { q: '', role: '', active: '', page: 1, sort: 'name', dir: 'asc' };
   var ROLE_FR = { admin: 'Administrateur', manager: 'Responsable', user: 'Utilisateur', readonly: 'Lecture seule' };
-  var fmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  var fmt = window.RVM.dtf({ dateStyle: 'short', timeStyle: 'short' });
 
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
   function msg(r, fb) { var e = r.data && r.data.error ? r.data.error : {}; return e.message || fb; }

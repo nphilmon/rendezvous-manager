@@ -105,3 +105,13 @@ Le champ **Type de lieu** adapte le formulaire :
 - **Autre** : *Lieu* et *Précisions* en texte libre.
 
 Seul le texte saisi dans *Adresse* (type « Sur place ») est transmis, par le serveur, à l'API Adresse ; un administrateur peut désactiver la fonction (`ADDRESS_API_ENABLED=false`).
+
+### Langue et format de date
+
+*Paramètres → Affichage* propose :
+
+- **Langue des dates** : français ou English. Elle change les noms des jours et des mois (calendrier, mini-calendrier, détails) ; **les textes de l'application restent en français**.
+- **Format de date** : *Selon la langue*, JJ/MM/AAAA, MM/JJ/AAAA ou AAAA-MM-JJ, pour les dates numériques (historique, sauvegardes, utilisateurs, rappels envoyés par le serveur).
+- **Format de l'heure** : 24 heures ou 12 heures (déjà existant), appliqué aussi aux rappels du serveur.
+
+Les champs de date des formulaires (sélecteur du navigateur) suivent la langue du navigateur et non ce réglage. Un administrateur peut définir ces valeurs par défaut pour toute l'organisation.

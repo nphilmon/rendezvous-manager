@@ -35,6 +35,23 @@ const settings = (p) => p.evaluate(async () => (await (await fetch('/api/v1/sett
   await p.selectOption('#u-start_hour', '20'); await p.click('#ui-form button[type=submit]'); await p.waitForSelector('#ui-msg.alert-error');
   check((await p.textContent('#ui-msg')).includes('end_hour'), 'début ≥ fin refusé avec message');
 
+  // ---- langue et format de date : noms de jours/mois et dates numériques selon les réglages ----
+  await p.selectOption('#u-start_hour', '8'); await p.selectOption('#u-language', 'en'); await p.selectOption('#u-date_format', 'mdy');
+  await p.click('#ui-form button[type=submit]'); await p.waitForSelector('#ui-msg.alert-ok');
+  const s2 = (await settings(p)).ui; check(s2.language === 'en' && s2.date_format === 'mdy', 'langue et format de date enregistrés sur le serveur');
+  await p.goto(BASE + '/calendar?view=week&date=2026-11-18'); await p.waitForSelector('.day-head');
+  check((await p.textContent('.day-head .dow')).trim().toLowerCase().startsWith('mon'), 'langue anglaise : jours de la semaine en anglais (« Mon »)');
+  const f = await p.evaluate(() => ['auto', 'dmy', 'mdy', 'ymd'].map(x => { window.RVM.ui.date_format = x; return window.RVM.dtf({ dateStyle: 'short', timeZone: 'UTC' }).format(Date.UTC(2026, 10, 18)); }));
+  check(JSON.stringify(f) === JSON.stringify(['18/11/2026', '18/11/2026', '11/18/2026', '2026-11-18']), 'formats de date numériques : jj/mm/aaaa, mm/jj/aaaa, aaaa-mm-jj ' + JSON.stringify(f));
+  const withTime = await p.evaluate(() => { window.RVM.ui.date_format = 'ymd'; window.RVM.ui.hour12 = false; return window.RVM.dtf({ dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' }).format(Date.UTC(2026, 10, 18, 14, 5)); });
+  check(/^2026-11-18[ ,]+14:05$/.test(withTime), 'date numérique réordonnée avec l\'heure conservée : ' + withTime);
+  await p.goto(BASE + '/settings'); await p.waitForSelector('#u-language');
+  await p.selectOption('#u-language', 'fr'); await p.selectOption('#u-date_format', 'auto'); await p.click('#ui-form button[type=submit]'); await p.waitForSelector('#ui-msg.alert-ok');
+  await p.goto(BASE + '/calendar?view=week&date=2026-11-18'); await p.waitForSelector('.day-head');
+  check((await p.textContent('.day-head .dow')).trim().toLowerCase().startsWith('lun'), 'retour au français : « lun. »');
+  await p.goto(BASE + '/settings'); await p.waitForSelector('#u-theme');
+  await p.selectOption('#u-start_hour', '8'); await p.selectOption('#u-end_hour', '19');
+
   // ---- les préférences suivent l'utilisateur sur un autre appareil (autre contexte, aucun stockage local) ----
   const ctx2 = await b.newContext({ viewport: { width: 1280, height: 900 } }); const p2 = await ctx2.newPage();
   p2.on('pageerror', e => problems.push(e.message));

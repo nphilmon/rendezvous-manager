@@ -30,7 +30,7 @@
     return m && t ? Date.UTC(+m[1], +m[2] - 1, +m[3], +t[1], +t[2]) : null;
   }
   function isoUtc(ms) { return new Date(ms).toISOString().slice(0, 19) + 'Z'; }
-  function fmt(o, tz) { o.timeZone = tz || TZ; return new Intl.DateTimeFormat('fr-FR', o); }
+  function fmt(o, tz) { o.timeZone = tz || TZ; return window.RVM.dtf(o); }
 
   /** Icône du sprite SVG de la page (symboles « i-… »). */
   function ico(name) {
@@ -183,7 +183,7 @@
         body.textContent = '';
         if (!r.ok) { body.textContent = 'Historique indisponible.'; return; }
         if (!r.data.data.length) { body.appendChild(el('p', 'muted small', 'Aucune entrée.')); return; }
-        var fmt = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'short', timeStyle: 'short', timeZone: TZ }), ul = el('ul', 'hist-list');
+        var fmt = window.RVM.dtf({ dateStyle: 'short', timeStyle: 'short', timeZone: TZ }), ul = el('ul', 'hist-list');
         r.data.data.forEach(function (h) {
           var li = el('li'), t = el('div', '', fmt.format(new Date(h.at)) + ' — ' + h.label + (h.user ? ' par ' + h.user.name : ''));
           li.appendChild(t);

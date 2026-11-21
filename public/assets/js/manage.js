@@ -124,8 +124,8 @@
         if (!r.data.data.length) { list.appendChild(el('p', 'muted', 'Aucun rendez-vous lié.')); return; }
         r.data.data.forEach(function (a) {
           var row = el('button', 'link-row'); row.type = 'button';
-          var when = a.all_day ? new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(Date.parse(a.start))
-            : new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: A.TZ }).format(Date.parse(a.start));
+          var when = a.all_day ? window.RVM.dtf({ day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(Date.parse(a.start))
+            : window.RVM.dtf({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: A.TZ }).format(Date.parse(a.start));
           row.append(el('span', 'when', when), el('span', 'tt', a.title));
           row.addEventListener('click', function () { dlg.close(); A.openDetails(a, cals.filter(function (k) { return k.id === a.calendar_id; })[0], opener); });
           list.appendChild(row);
@@ -321,7 +321,7 @@
   // =========================================================== NOTIFICATIONS =======================================
   function notifications() {
     var tab = 'unread', page = 1, TABS = [['unread', 'Non lues'], ['read', 'Lues'], ['upcoming', 'À venir'], ['all', 'Historique']];
-    var fmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: A.TZ });
+    var fmt = window.RVM.dtf({ weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: A.TZ });
     var tabs = el('div', 'tabs'); tabs.setAttribute('role', 'tablist'); toolbar.appendChild(tabs);
     var allBtn = el('button', 'btn', 'Tout marquer comme lu'); allBtn.type = 'button'; toolbar.appendChild(allBtn);
     var tabBtns = {};

@@ -22,6 +22,39 @@
       });
   };
 
+
+  // ---- Dates : langue (noms de jours et de mois) et format de date choisis dans Paramètres -------------------------------------------------
+  // Les textes de l'interface restent en français ; « language » ne change que les noms et l'ordre des éléments d'une date.
+  function uiPref() { return window.RVM.ui || {}; }
+  window.RVM.locale = function () {
+    var u = uiPref(), f = u.date_format || 'auto';
+    if (u.language !== 'en') return 'fr-FR';
+    return f === 'mdy' ? 'en-US' : (f === 'ymd' ? 'en-CA' : 'en-GB');
+  };
+  /** Équivalent de new Intl.DateTimeFormat(locale, options) selon les réglages ; seules les dates numériques sont réordonnées (jj/mm/aaaa, mm/jj/aaaa, aaaa-mm-jj). */
+  window.RVM.dtf = function (opts) {
+    var u = uiPref(), f = u.date_format || 'auto', o = Object.assign({}, opts);
+    var hasTime = o.timeStyle !== undefined || o.hour !== undefined;
+    if (hasTime && o.hour12 === undefined && o.hourCycle === undefined) o.hour12 = u.hour12 === true;
+    var numeric = o.dateStyle === 'short' || (o.dateStyle === undefined && (o.month === 'numeric' || o.month === '2-digit'));
+    if (f !== 'auto' && numeric && o.dateStyle === 'short') { // année sur 4 chiffres quelle que soit la langue (en-US : « 11/18/26 » sinon)
+      var ts = o.timeStyle; delete o.dateStyle; delete o.timeStyle; o.year = 'numeric'; o.month = '2-digit'; o.day = '2-digit';
+      if (ts) { o.hour = '2-digit'; o.minute = '2-digit'; if (ts !== 'short') o.second = '2-digit'; }
+    }
+    var base = new Intl.DateTimeFormat(window.RVM.locale(), o);
+    if (f === 'auto' || !numeric) return base;
+    var order = f === 'mdy' ? ['month', 'day', 'year'] : (f === 'ymd' ? ['year', 'month', 'day'] : ['day', 'month', 'year']), sep = f === 'ymd' ? '-' : '/';
+    return {
+      format: function (d) {
+        var parts = base.formatToParts(d), v = {}, first = -1, last = -1;
+        parts.forEach(function (p, i) { if (p.type === 'day' || p.type === 'month' || p.type === 'year') { v[p.type] = p.value; if (first < 0) first = i; last = i; } });
+        if (first < 0) return base.format(d);
+        var date = order.filter(function (k) { return v[k] !== undefined; }).map(function (k) { return v[k]; }).join(sep);
+        return parts.slice(0, first).map(function (p) { return p.value; }).join('') + date + parts.slice(last + 1).map(function (p) { return p.value; }).join('');
+      }
+    };
+  };
+
   // ---- Préférences d'affichage : source = serveur (meta ui-settings), partagées par tous les appareils ----------
   var serverUi = document.documentElement.getAttribute('data-theme-server') === '1';
   var ui = null; try { ui = JSON.parse(($('meta[name="ui-settings"]') || {}).content); } catch (e) { ui = null; }
@@ -127,9 +160,9 @@
     var selected = parse(mc.dataset.date), today = nowInTz();
     var cursor = new Date(Date.UTC((selected || today).getUTCFullYear(), (selected || today).getUTCMonth(), 1));
     var view = mc.dataset.view || 'week';
-    var fmt = function (o) { o.timeZone = 'UTC'; return new Intl.DateTimeFormat('fr-FR', o); };
+    var fmt = function (o) { o.timeZone = 'UTC'; return window.RVM.dtf(o); };
     var monthFmt = fmt({ month: 'long', year: 'numeric' }), dayFmt = fmt({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    var DOW = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+    var DOW = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return fmt({ weekday: 'long' }).format(Date.UTC(2026, 10, 15 + i)); }); // 15/11/2026 est un dimanche
 
     var draw = function () {
       mc.textContent = '';

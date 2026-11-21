@@ -112,6 +112,7 @@ final class ReminderPlanner
              VALUES (?, ?, ?, ?, ?, ?, \'pending\', ?, ?, ?)'
         );
         $created = 0;
+        $uiOf = [];
         foreach ($cands as $c) {
             $p = $prefs[$c['user_id']];
             if (!$p['enabled'] || !in_array($c['channel'], $p['channels'], true) || !$this->canRead($c['user_id'], $c['calendar_id'])) {
@@ -121,7 +122,7 @@ final class ReminderPlanner
             if (strtotime($c['trigger'] . ' UTC') < $now->getTimestamp() - $grace) {
                 continue;
             }
-            [$title, $body] = NotificationText::make($c, $p['privacy']);
+            [$title, $body] = NotificationText::make($c, $p['privacy'], $uiOf[$c['user_id']] ??= $this->settings->ui($c['user_id']));
             $ins->execute([$c['reminder_id'], $c['appointment_id'], $c['user_id'], $c['channel'], $c['original'], $c['trigger'], $title, $body, $now->format(self::FMT)]);
             $created += $ins->rowCount();
         }
@@ -141,7 +142,7 @@ final class ReminderPlanner
         $out = [];
         foreach ($this->candidates($now, $now->modify("+$days days"), $now, $userId) as $c) {
             if ($c['channel'] === 'inapp' && $this->canRead($userId, $c['calendar_id'])) {
-                [$title, $body] = NotificationText::make($c, $prefs['privacy']);
+                [$title, $body] = NotificationText::make($c, $prefs['privacy'], $ui ??= $this->settings->ui($userId));
                 $out[] = ['appointment_id' => $c['appointment_id'], 'occurrence_start' => $c['original'], 'trigger_at' => $c['trigger'], 'start' => $c['start'], 'offset_minutes' => $c['offset_minutes'],
                     'title' => $title, 'body' => $body, 'recurring' => $c['recurring']];
             }
