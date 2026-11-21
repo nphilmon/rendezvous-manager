@@ -73,6 +73,7 @@ L'assistant écrit les paramètres de la base ; le reste se règle à la main da
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push (clés générées par `php scripts/generate_vapid.php`) | vides |
 | `PUSH_ALLOW_ANY` | autorise d'autres services push que FCM/Mozilla/Apple (déconseillé) | `false` |
 | `BACKUP_DIR`, `BACKUP_KEEP` | dossier et nombre de sauvegardes conservées | `storage/backups`, `14` |
+| `BACKUP_KEY` | clé de chiffrement des sauvegardes (base64 de 32 octets, `php scripts/generate_backup_key.php`) ; **à conserver hors du serveur** ; vide = sauvegardes en clair | vide |
 | `AUDIT_RETENTION_DAYS` | purge du journal d'audit (0 = jamais) | `0` |
 | `TEST_DB_*` | base **dédiée** aux tests (nom finissant par `_test`) — inutile en production | — |
 

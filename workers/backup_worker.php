@@ -16,7 +16,7 @@ use App\Services\Backup\BackupService;
 
 try {
     $pdo = Database::connection();
-    $svc = new BackupService($pdo, (string) Config::get('app.backup.dir'), (string) Config::get('app.version'));
+    $svc = BackupService::fromConfig($pdo);
     $meta = $svc->create(null);
     $check = $svc->verify($svc->path($meta['name']));
     if (!$check['ok']) {

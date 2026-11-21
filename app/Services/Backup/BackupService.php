@@ -15,14 +15,27 @@ use RuntimeException;
  */
 final class BackupService
 {
-    public const NAME = '/^rvm-\d{8}-\d{6}(-[a-f0-9]{6})?\.sql\.gz$/';
+    public const NAME = '/^rvm-\d{8}-\d{6}(-[a-f0-9]{6})?\.sql\.gz(\.enc)?$/';
     private const FORMAT = 'rvm-backup-1';
     private const END = '-- END rvm-backup-1';
     private const SKIP_DATA = ['user_sessions', 'login_attempts'];
     private const BATCH = 200;
 
-    public function __construct(private PDO $pdo, private string $dir, private string $appVersion = '')
+    /** @param ?string $key clé maîtresse de 32 octets (BACKUP_KEY décodée) : si fournie, les nouvelles sauvegardes sont chiffrées */
+    public function __construct(private PDO $pdo, private string $dir, private string $appVersion = '', private ?string $key = null)
     {
+    }
+
+    /** Service configuré depuis la configuration de l'application (dossier, version, BACKUP_KEY). Une BACKUP_KEY invalide provoque une exception : jamais de repli silencieux en clair. */
+    public static function fromConfig(PDO $pdo): self
+    {
+        $k = (string) \App\Core\Config::get('app.backup.key', '');
+        return new self($pdo, (string) \App\Core\Config::get('app.backup.dir'), (string) \App\Core\Config::get('app.version'), $k === '' ? null : BackupCrypto::parseKey($k));
+    }
+
+    public function encrypts(): bool
+    {
+        return $this->key !== null;
     }
 
     public function dir(): string
@@ -118,7 +131,22 @@ final class BackupService
         $final = $this->dir . '/' . $name;
         rename($part, $final);
         @chmod($final, 0600);
-        $meta = ['name' => $name, 'format' => self::FORMAT, 'created_at' => $now->format('Y-m-d\TH:i:s\Z'), 'created_by' => $userId, 'size' => filesize($final),
+        if ($this->key !== null) {
+            $enc = $final . '.enc';
+            try {
+                BackupCrypto::encryptFile($final, $enc . '.part', $this->key);
+                rename($enc . '.part', $enc);
+                @chmod($enc, 0600);
+            } catch (\Throwable $e) {
+                @unlink($enc . '.part');
+                @unlink($final);
+                throw $e;
+            }
+            unlink($final); // jamais de copie en clair à côté de la copie chiffrée
+            $final = $enc;
+            $name .= '.enc';
+        }
+        $meta = ['name' => $name, 'encrypted' => $this->key !== null, 'format' => self::FORMAT, 'created_at' => $now->format('Y-m-d\TH:i:s\Z'), 'created_by' => $userId, 'size' => filesize($final),
             'sha256' => hash_file('sha256', $final), 'migration' => $migration, 'app_version' => $this->appVersion, 'tables' => $tables, 'rows' => array_sum($tables)];
         file_put_contents($final . '.json', json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
         @chmod($final . '.json', 0600);
@@ -129,14 +157,14 @@ final class BackupService
     public function list(): array
     {
         $out = [];
-        foreach (glob($this->dir . '/rvm-*.sql.gz') ?: [] as $f) {
+        foreach (glob($this->dir . '/rvm-*.sql.gz*') ?: [] as $f) {
             $name = basename($f);
             if (!preg_match(self::NAME, $name)) {
                 continue;
             }
             $meta = is_file($f . '.json') ? (json_decode((string) file_get_contents($f . '.json'), true) ?: []) : [];
             $out[] = ['name' => $name, 'size' => (int) filesize($f), 'created_at' => $meta['created_at'] ?? gmdate('Y-m-d\TH:i:s\Z', (int) filemtime($f)), 'created_by' => $meta['created_by'] ?? null,
-                'sha256' => $meta['sha256'] ?? null, 'rows' => $meta['rows'] ?? null, 'migration' => $meta['migration'] ?? null, 'tables' => isset($meta['tables']) ? count($meta['tables']) : null];
+                'encrypted' => (bool) ($meta['encrypted'] ?? false), 'sha256' => $meta['sha256'] ?? null, 'rows' => $meta['rows'] ?? null, 'migration' => $meta['migration'] ?? null, 'tables' => isset($meta['tables']) ? count($meta['tables']) : null];
         }
         usort($out, static fn ($a, $b) => [$b['created_at'], $b['name']] <=> [$a['created_at'], $a['name']]);
         return $out;
@@ -176,7 +204,16 @@ final class BackupService
         } else {
             $problems[] = 'Fichier de contrôle (.json) absent : intégrité non vérifiable.';
         }
-        $gz = @gzopen($path, 'rb');
+        $tmp = null;
+        $read = $path;
+        if (BackupCrypto::isEncrypted($path)) {
+            try {
+                [$read, $tmp] = $this->plainCopy($path);
+            } catch (RuntimeException $e) {
+                return ['ok' => false, 'problems' => array_merge($problems, [$e->getMessage()])];
+            }
+        }
+        $gz = @gzopen($read, 'rb');
         $last = '';
         $header = false;
         if ($gz === false) {
@@ -200,7 +237,36 @@ final class BackupService
                 $problems[] = 'Marqueur de fin absent : sauvegarde incomplète.';
             }
         }
+        if ($tmp !== null) {
+            @unlink($tmp);
+        }
         return ['ok' => $problems === [], 'problems' => $problems];
+    }
+
+    /**
+     * Fichier .sql.gz lisible : le fichier lui-même, ou une copie temporaire déchiffrée (à supprimer par l'appelant).
+     * @return array{0:string,1:?string} [chemin à lire, chemin temporaire à supprimer]
+     */
+    private function plainCopy(string $path): array
+    {
+        if (!BackupCrypto::isEncrypted($path)) {
+            return [$path, null];
+        }
+        if ($this->key === null) {
+            throw new RuntimeException('Sauvegarde chiffrée : BACKUP_KEY absente de la configuration (php scripts/generate_backup_key.php, ou la clé d\'origine).');
+        }
+        $tmp = tempnam(sys_get_temp_dir(), 'rvmdec');
+        if ($tmp === false) {
+            throw new RuntimeException('Fichier temporaire impossible.');
+        }
+        @chmod($tmp, 0600);
+        try {
+            BackupCrypto::decryptFile($path, $tmp, $this->key);
+        } catch (\Throwable $e) {
+            @unlink($tmp);
+            throw $e instanceof RuntimeException ? $e : new RuntimeException($e->getMessage());
+        }
+        return [$tmp, $tmp];
     }
 
     /**
@@ -213,7 +279,8 @@ final class BackupService
         if (!$v['ok']) {
             throw new RuntimeException('Sauvegarde invalide : ' . implode(' ', $v['problems']));
         }
-        $gz = gzopen($path, 'rb');
+        [$read, $tmp] = $this->plainCopy($path);
+        $gz = gzopen($read, 'rb');
         $n = 0;
         try {
             while (($line = gzgets($gz)) !== false) {
@@ -226,6 +293,9 @@ final class BackupService
             }
         } finally {
             gzclose($gz);
+            if ($tmp !== null) {
+                @unlink($tmp);
+            }
             $this->pdo->exec('SET FOREIGN_KEY_CHECKS=1');
         }
         return ['statements' => $n];

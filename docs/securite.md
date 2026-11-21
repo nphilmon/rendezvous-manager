@@ -48,7 +48,7 @@ Ces points sont couverts par `CodeHygieneTest` (aucun `innerHTML`, `eval`, scrip
 ## Secrets et données
 
 - `.env` (droits 0600, hors zone publique, ignoré par git) contient les accès base, SMTP et la clé VAPID privée, **en clair**. Les journaux masquent les champs sensibles ; le journal d'audit ne contient jamais de mot de passe ni de jeton.
-- Les sauvegardes contiennent **toutes les données et les condensats de mots de passe**. Elles ne sont **pas chiffrées** ; le dossier `storage/` est interdit au web (`.htaccess`) et les fichiers sont en 0600.
+- Les sauvegardes contiennent **toutes les données et les condensats de mots de passe**. Elles sont **chiffrées** (AES-256-GCM) quand `BACKUP_KEY` est renseignée (`php scripts/generate_backup_key.php`) : **la clé doit être conservée hors du serveur**, sans elle les sauvegardes sont illisibles ; sans `BACKUP_KEY` elles restent en clair (`deploy_check` le signale). Le dossier `storage/` est interdit au web (`.htaccess`) et les fichiers sont en 0600. La clé, comme les autres secrets de `.env`, est stockée en clair sur le serveur : un attaquant qui y accède lit aussi `.env`, le chiffrement protège surtout les copies exportées.
 - L'assistant d'installation est protégé par un jeton à usage unique (2 h) et **verrouillé** une fois l'installation terminée.
 - Seul `public/index.php` est exécutable depuis le web (vérifié par un test).
 
@@ -67,8 +67,8 @@ Authentification, rendez-vous (avec ancienne/nouvelle valeur des champs), compte
 
 - Pas de double authentification, pas de réinitialisation du mot de passe par e-mail.
 - Pas de limitation de débit générale de l'API, pas de CAPTCHA.
-- Pas de chiffrement des sauvegardes ni des secrets au repos.
-- Pas de signature du journal d'audit ; l'audit ne couvre pas encore les modifications de calendriers, contacts, catégories et réglages.
+- Pas de chiffrement des secrets de `.env` au repos ; les sauvegardes ne sont chiffrées que si `BACKUP_KEY` est renseignée.
+- Pas de signature du journal d'audit ; l'audit couvre aussi calendriers, contacts, catégories, changements de droits et réglages d'organisation.
 - Pas d'audit externe ; pas de test contre un vrai serveur MySQL distant en TLS `verify` ni contre de vrais services Web Push / SMTP.
 - L'assistant ne vérifie pas que la racine web est `public/` ni que HTTPS est actif.
 

@@ -19,7 +19,7 @@ final class BackupApiController
     public function index(Request $req): Response
     {
         $this->guard->requirePermission($req, 'backups.manage');
-        return Response::json(['data' => $this->backups->list(), 'meta' => ['keep' => $this->keep]]);
+        return Response::json(['data' => $this->backups->list(), 'meta' => ['keep' => $this->keep, 'encrypts' => $this->backups->encrypts()]]);
     }
 
     /** POST /api/v1/backups : crée, vérifie puis applique la rotation. */
@@ -39,7 +39,7 @@ final class BackupApiController
         $u = $this->guard->requirePermission($req, 'backups.manage')['user'];
         $path = $this->backups->path((string) ($p['name'] ?? ''));
         $this->audit->log('backup.download', $u->id, null, null, $req->ip, ['name' => basename($path)]);
-        return new Response(200, (string) file_get_contents($path), ['Content-Type' => 'application/gzip', 'Content-Disposition' => 'attachment; filename="' . basename($path) . '"', 'Cache-Control' => 'no-store']);
+        return new Response(200, (string) file_get_contents($path), ['Content-Type' => str_ends_with($path, '.enc') ? 'application/octet-stream' : 'application/gzip', 'Content-Disposition' => 'attachment; filename="' . basename($path) . '"', 'Cache-Control' => 'no-store']);
     }
 
     public function verify(Request $req, array $p): Response

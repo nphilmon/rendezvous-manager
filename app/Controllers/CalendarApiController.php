@@ -182,8 +182,24 @@ final class CalendarApiController
             $e['permissions'][] = "Utilisateur $bad introuvable ou désactivé.";
         }
         Rules::throwIf($e);
+        $flag = static fn (array $g): string => implode('', array_map(static fn ($f, $l) => !empty($g[$f]) ? $l : '', ['can_read', 'can_create', 'can_update', 'can_delete', 'can_share'], ['L', 'C', 'M', 'S', 'P']));
+        $before = [];
+        foreach ($this->calendars->permissions((int) $c['id']) as $r) {
+            $before[(int) $r['user_id']] = $flag($r);
+        }
         $this->calendars->replacePermissions((int) $c['id'], array_values($grants));
         $this->changes?->record('calendar', (int) $c['id'], 'updated', $u->id, $req->ip, (int) $c['id']);
+        // droits : L lire, C créer, M modifier, S supprimer, P partager ; seules les différences sont journalisées
+        $after = array_map($flag, array_column($grants, null, 'user_id'));
+        $diff = [];
+        foreach (array_unique(array_merge(array_keys($before), array_keys($after))) as $uid) {
+            if (($before[$uid] ?? '') !== ($after[$uid] ?? '')) {
+                $diff[(string) $uid] = [$before[$uid] ?? '', $after[$uid] ?? ''];
+            }
+        }
+        if ($diff !== []) {
+            $this->changes?->auditOnly('calendar.permissions_changed', $u->id, 'calendar', (int) $c['id'], $req->ip, ['changes' => $diff]);
+        }
         return $this->permissions($req, $p);
     }
 

@@ -27,7 +27,7 @@ Chaque critère du § 27 est relié à ce qui le vérifie. **Vérifié automatiq
 | 21 | Importations | `TransferTest` (simulation, erreurs par ligne, doublons, ICS) | Automatique (import XLSX non fourni) |
 | 22 | Permissions | `AccessMatrixTest` (toutes les routes, quatre rôles), `AuthTest`, tests de chaque API | Automatique |
 | 23 | Administration avec phpMyAdmin | `docs/phpmyadmin.md`, `docs/serveur_linux.md` § 5 | **Documenté, non installé ni testé ici** |
-| 24 | Sauvegardes | `BackupAuditTest` (aller-retour, altération, rotation, verrou), `audit.e2e.js` ; sauvegarde réelle en production | Automatique + réel (restauration vérifiée sur la base de test seulement) |
+| 24 | Sauvegardes (automatiques, manuelles, chiffrées, versionnées, vérifiées, restaurables) | `BackupAuditTest`, `BackupEncryptionTest` (chiffrement, altération, troncature, mauvaise clé), `audit.e2e.js` ; restauration vers une autre base répétée de bout en bout ; sauvegarde réelle en production | Automatique + réel (restauration réelle en production non exercée volontairement) |
 | 25 | Ordinateur et mobile | captures et tests à 390 px (menu mobile, calendrier, tactile) | Émulation Chromium ; **aucun appareil réel** |
 
 ## Tests obligatoires (§ 24)
@@ -56,12 +56,12 @@ Les tests utilisent une base **isolée** dont le nom doit finir par `_test` (ref
 | FullCalendar (timeGrid, dayGrid) | **Grille écrite pour le projet**, sans bibliothèque | évite les questions de licence des fonctions utilisées et toute dépendance ; couverte par les tests |
 | Tailwind (CDN en développement, CSS compilé en production) | **CSS écrit à la main**, statique, aucun CDN | rien à compiler, CSP stricte sans style en ligne |
 | Composer pour les bibliothèques nécessaires | `composer.json` sans paquet tiers ; chargeur de secours | aucune bibliothèque nécessaire |
-| Sauvegardes **chiffrées** | **Non chiffrées** (droits 0600, dossier interdit au web, somme SHA-256) | non réalisé ; chiffrer la copie externe (`docs/serveur_linux.md` § 18) |
+| Sauvegardes **chiffrées** | **Chiffrées** (AES-256-GCM) dès que `BACKUP_KEY` est renseignée ; en clair sinon | clé à conserver hors du serveur ; secrets de `.env` non chiffrés au repos |
 | Server-Sent Events « éventuellement » | Interrogation périodique (30 s par défaut, 2 à 300) | première implémentation prévue par le cahier |
 | Langue, format de date (§ 21) | Français uniquement ; format de date fixe | non réalisé |
 | Couleurs et calendriers affichés (§ 21) | couleurs par calendrier/catégorie ; masquage de calendriers conservé **dans le navigateur** | non enregistré sur le serveur |
-| « État du serveur, version de la base, migrations » dans l'administration | `deploy_check`/`healthcheck` en ligne de commande ; pas de page dédiée | non réalisé en interface |
-| Audit des « changements de permissions » | partages de calendrier non journalisés (rendez-vous, comptes, connexions, exports, imports, sauvegardes le sont) | non réalisé |
+| « État du serveur, version de la base, migrations » dans l'administration | panneau « État du serveur » dans Paramètres (administrateur) et `GET /api/v1/system` | réalisé |
+| Audit des « changements de permissions » | `calendar.permissions_changed` (droits avant/après par utilisateur) ; rôles et comptes via `user.*` | réalisé |
 
 ## Non vérifié
 

@@ -82,6 +82,9 @@ final class DeployCheck
         $public = realpath($this->root . '/public') ?: $this->root . '/public';
         $add('backup_dir', str_starts_with($real . '/', $public . '/') ? 'fail' : 'ok', str_starts_with($real . '/', $public . '/') ? 'BACKUP_DIR est dans public/ : les sauvegardes seraient téléchargeables' : 'Dossier de sauvegarde hors de public/');
 
+        $key = $e['BACKUP_KEY'] ?? '';
+        $add('backup_key', $key !== '' ? 'ok' : 'warn', $key !== '' ? 'Sauvegardes chiffrées (BACKUP_KEY renseignée) : conservez la clé hors du serveur' : 'Sauvegardes NON chiffrées (BACKUP_KEY vide) : php scripts/generate_backup_key.php');
+
         $hb = $this->root . '/storage/logs/cron_heartbeat';
         $age = is_file($hb) ? $now - (int) filemtime($hb) : null;
         $add('cron_reminders', $age !== null && $age < 300 ? 'ok' : 'warn', $age === null ? 'Aucun passage du worker de rappels (cron absent ?)' : "Worker de rappels : dernier passage il y a {$age} s" . ($age < 300 ? '' : ' (cron arrêté ?)'));

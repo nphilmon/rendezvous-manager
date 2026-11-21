@@ -11,6 +11,7 @@ use App\Controllers\AuditApiController;
 use App\Controllers\BackupApiController;
 use App\Repositories\AuditRepository;
 use App\Services\Backup\BackupService;
+use App\Controllers\SystemApiController;
 use App\Controllers\UserApiController;
 use App\Services\UserAdminService;
 use App\Controllers\TransferApiController;
@@ -127,7 +128,7 @@ return static function (Router $r, ?\PDO $injected = null): void {
     $backup = static function () use ($deps): BackupApiController {
         [$pdo, $guard] = $deps();
         $keep = (int) Config::get('app.backup.keep', 14);
-        return new BackupApiController($guard, new BackupService($pdo, (string) Config::get('app.backup.dir'), (string) Config::get('app.version')), new AuditLogger($pdo), $keep);
+        return new BackupApiController($guard, BackupService::fromConfig($pdo), new AuditLogger($pdo), $keep);
     };
     $r->add('GET', '/api/v1/audit', static fn (Request $q) => $audit()->index($q));
     $r->add('GET', '/api/v1/appointments/{id}/history', static fn (Request $q, array $p) => $audit()->appointmentHistory($q, $p));
@@ -151,6 +152,10 @@ return static function (Router $r, ?\PDO $injected = null): void {
     $r->add('POST', '/api/v1/notifications/{id}/unread', static fn (Request $q, array $p) => $notif()->unread($q, $p));
     $r->add('GET', '/api/v1/settings', static fn (Request $q) => $settingsCtl()->show($q));
     $r->add('PUT', '/api/v1/settings', static fn (Request $q) => $settingsCtl()->update($q));
+    $r->add('GET', '/api/v1/system', static function (Request $q) use ($deps): Response {
+        [$pdo, $guard] = $deps();
+        return (new SystemApiController($guard, $pdo, dirname(__DIR__)))->show($q);
+    });
     $r->add('GET', '/api/v1/settings/global', static fn (Request $q) => $settingsCtl()->showGlobal($q));
     $r->add('PUT', '/api/v1/settings/global', static fn (Request $q) => $settingsCtl()->updateGlobal($q));
     $r->add('GET', '/api/v1/calendars', static fn (Request $q) => $cal()->calendars($q));

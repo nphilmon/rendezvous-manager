@@ -235,3 +235,4 @@ fieldset.chan{border:1px solid var(--line);border-radius:10px;margin:12px 0 0;pa
 /* ---- Historique et sauvegardes (phase 17) ---- */
 .nowrap{white-space:nowrap}
 .hist{margin:12px 0}.hist summary{cursor:pointer;color:var(--muted)}.hist-list{list-style:none;margin:8px 0 0;padding:0;max-height:240px;overflow:auto}.hist-list li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+.bad{color:var(--bad)}

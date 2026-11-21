@@ -14,7 +14,7 @@ use App\Services\DeployCheck;
 
 $root = dirname(__DIR__);
 $env = [];
-foreach (['APP_ENV', 'APP_DEBUG', 'APP_URL', 'COOKIE_SECURE', 'HSTS_MAX_AGE', 'BACKUP_DIR'] as $k) {
+foreach (['APP_ENV', 'APP_DEBUG', 'APP_URL', 'COOKIE_SECURE', 'HSTS_MAX_AGE', 'BACKUP_DIR', 'BACKUP_KEY'] as $k) {
     $v = \App\Core\Env::get($k, '');
     if ($v !== '') {
         $env[$k] = (string) $v;

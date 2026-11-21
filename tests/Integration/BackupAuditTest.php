@@ -279,6 +279,26 @@ final class BackupAuditTest extends DatabaseTestCase
         $this->assertTrue(!str_contains($this->call('admin', 'GET', '/api/v1/audit', [], ['per_page' => 100])->body, 'Nouveau-Secret'), 'aucun mot de passe dans le journal');
     }
 
+    public function testCalendarPermissionChangesAreAudited(): void
+    {
+        $put = fn (array $perms) => $this->call('alice', 'PUT', '/api/v1/calendars/1/permissions', ['permissions' => $perms]);
+        $this->assertSame(200, $put([['user_id' => 3, 'can_read' => true, 'can_create' => true]])->status);
+        $this->assertSame(200, $put([['user_id' => 3, 'can_read' => true, 'can_create' => true]])->status, 'répétition identique');
+        $this->assertSame(200, $put([['user_id' => 3, 'can_read' => true, 'can_create' => true, 'can_update' => true]])->status);
+        $this->assertSame(200, $put([])->status);
+        $rows = $this->pdo->query("SELECT user_id, entity_id, details FROM audit_logs WHERE action = 'calendar.permissions_changed' ORDER BY id")->fetchAll();
+        $this->assertSame(3, count($rows), 'une ligne par changement réel, aucune pour la répétition identique');
+        $this->assertSame([2, 1], [(int) $rows[0]['user_id'], (int) $rows[0]['entity_id']]);
+        $this->assertSame(['3' => ['', 'LC']], json_decode($rows[0]['details'], true)['changes']);
+        $this->assertSame(['3' => ['LC', 'LCM']], json_decode($rows[1]['details'], true)['changes']);
+        $this->assertSame(['3' => ['LCM', '']], json_decode($rows[2]['details'], true)['changes'], 'retrait du partage');
+        $list = $this->j($this->call('admin', 'GET', '/api/v1/audit', [], ['action' => 'calendar.permissions_changed']));
+        $this->assertSame(3, $list['meta']['total']);
+        $this->assertSame('Droits d\'un calendrier modifiés', $list['data'][0]['label']);
+        $this->assertSame('Calendrier modifié', AuditRepository::label('calendar.updated'));
+        $this->assertSame('Contact supprimé', AuditRepository::label('contact.deleted'));
+    }
+
     public function testLabelsAndRetention(): void
     {
         $this->assertSame('Rendez-vous annulé (toute la série)', AuditRepository::label('appointment.cancel_series'));

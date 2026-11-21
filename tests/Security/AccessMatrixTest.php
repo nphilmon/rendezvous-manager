@@ -151,6 +151,7 @@ final class AccessMatrixTest extends DatabaseTestCase
             ['DELETE /api/v1/backups/x', [], ['ok', 403, 403, 403]],
             ['GET /api/v1/settings', [], ['ok', 'ok', 'ok', 'ok']],
             ['GET /api/v1/settings/global', [], ['ok', 403, 403, 403]],
+            ['GET /api/v1/system', [], ['ok', 403, 403, 403]],
             ['PUT /api/v1/settings/global', [], ['ok', 403, 403, 403]],
             ['GET /api/v1/notifications', [], ['ok', 'ok', 'ok', 'ok']],
         ];

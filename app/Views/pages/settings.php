@@ -99,6 +99,13 @@
   </form>
 </section>
 <?php endif; ?>
+<?php if (!empty($canAdmin)): ?>
+<section class="panel" aria-labelledby="h-sys">
+  <h2 id="h-sys">État du serveur (administrateur)</h2>
+  <div id="sys-body" aria-live="polite"><p class="muted">Chargement…</p></div>
+  <button class="btn" type="button" id="sys-refresh">Actualiser</button>
+</section>
+<?php endif; ?>
 <script src="/assets/js/prefs.js" defer></script>
 <script src="/assets/js/settings.js" defer></script>
 <script src="/assets/js/push.js" defer></script>

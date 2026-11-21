@@ -29,6 +29,7 @@ return [
     'backup'   => [
         'dir'  => Env::get('BACKUP_DIR', '') ?: dirname(__DIR__) . '/storage/backups',
         'keep' => max(1, Env::int('BACKUP_KEEP', 14)), // nombre de sauvegardes conservées
+        'key'  => Env::get('BACKUP_KEY', ''),          // clé de chiffrement (base64 de 32 octets) ; vide = sauvegardes non chiffrées
     ],
     'audit'    => [
         'retention_days' => max(0, Env::int('AUDIT_RETENTION_DAYS', 0)), // 0 = conservation illimitée

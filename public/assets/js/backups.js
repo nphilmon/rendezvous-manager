@@ -27,16 +27,17 @@
       results.textContent = '';
       if (!r.ok) { results.appendChild(el('p', 'alert alert-error', msg(r, 'Chargement impossible.'))); return; }
       var rows = r.data.data;
+      if (!r.data.meta.encrypts) results.appendChild(el('p', 'notice', 'Les nouvelles sauvegardes ne sont pas chiffrées : générez une clé avec « php scripts/generate_backup_key.php » (voir la documentation).'));
       if (!rows.length) { results.appendChild(el('p', 'empty', 'Aucune sauvegarde pour l\'instant. Créez-en une, et planifiez la sauvegarde automatique.')); return; }
       var age = (Date.now() - new Date(rows[0].created_at).getTime()) / 86400000;
       if (age > 2) results.appendChild(el('p', 'notice', 'La dernière sauvegarde date de ' + Math.floor(age) + ' jours : vérifiez la tâche planifiée.'));
       var wrap = el('div', 'table-wrap'), t = el('table', 'tbl'), th = el('thead'), hr = el('tr');
-      ['Fichier', 'Date', 'Taille', 'Lignes', 'Somme SHA-256', 'Actions'].forEach(function (c) { var h = el('th', '', c); h.scope = 'col'; hr.appendChild(h); });
+      ['Fichier', 'Date', 'Taille', 'Lignes', 'Chiffrée', 'Somme SHA-256', 'Actions'].forEach(function (c) { var h = el('th', '', c); h.scope = 'col'; hr.appendChild(h); });
       th.appendChild(hr); t.appendChild(th);
       var tb = el('tbody');
       rows.forEach(function (b) {
         var tr = el('tr');
-        tr.append(el('td', '', b.name), el('td', 'nowrap', fmt.format(new Date(b.created_at))), el('td', '', size(b.size)), el('td', '', b.rows === null ? '?' : String(b.rows)),
+        tr.append(el('td', '', b.name), el('td', 'nowrap', fmt.format(new Date(b.created_at))), el('td', '', size(b.size)), el('td', '', b.rows === null ? '?' : String(b.rows)), el('td', '', b.encrypted ? 'Oui' : 'Non'),
           el('td', 'small', b.sha256 ? b.sha256.slice(0, 16) + '…' : 'absente'));
         var td = el('td', 'row-actions');
         var btn = function (label, fn, danger) { var x = el('button', 'btn btn-sm' + (danger ? ' btn-danger' : ''), label); x.type = 'button'; x.setAttribute('aria-label', label + ' : ' + b.name); x.addEventListener('click', function () { fn(x); }); td.appendChild(x); };

@@ -15,7 +15,10 @@ final class AuditRepository
         'auth.password_change_failed' => 'Échec de changement de mot de passe', 'user.create' => 'Compte créé', 'user.update' => 'Compte modifié', 'user.activate' => 'Compte réactivé',
         'user.deactivate' => 'Compte désactivé', 'user.password_reset' => 'Mot de passe réinitialisé', 'user.unlock' => 'Compte débloqué', 'user.sessions_revoked' => 'Sessions fermées',
         'data.export' => 'Export de données', 'data.import' => 'Import de données', 'email.test' => 'E-mail de test', 'push.subscribe' => 'Abonnement push', 'push.unsubscribe' => 'Désabonnement push',
-        'push.test' => 'Notification push de test', 'backup.create' => 'Sauvegarde créée', 'backup.delete' => 'Sauvegarde supprimée', 'backup.download' => 'Sauvegarde téléchargée', 'backup.restore' => 'Sauvegarde restaurée',
+        'push.test' => 'Notification push de test', 'calendar.created' => 'Calendrier créé', 'calendar.updated' => 'Calendrier modifié', 'calendar.deleted' => 'Calendrier supprimé',
+        'calendar.permissions_changed' => 'Droits d\'un calendrier modifiés', 'category.created' => 'Catégorie créée', 'category.updated' => 'Catégorie modifiée', 'category.deleted' => 'Catégorie supprimée',
+        'contact.created' => 'Contact créé', 'contact.updated' => 'Contact modifié', 'contact.deleted' => 'Contact supprimé', 'user.profile_update' => 'Profil modifié',
+        'settings.global_update' => 'Réglages de l\'organisation modifiés', 'install.admin_created' => 'Administrateur créé à l\'installation', 'backup.create' => 'Sauvegarde créée', 'backup.delete' => 'Sauvegarde supprimée', 'backup.download' => 'Sauvegarde téléchargée', 'backup.restore' => 'Sauvegarde restaurée',
     ];
     private const SUFFIX = ['_series' => ' (toute la série)', '_occurrence' => ' (une occurrence)', '_single' => ' (une occurrence)', '_following' => ' (cette occurrence et les suivantes)', '_all' => ' (toute la série)'];
 

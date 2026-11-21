@@ -1,6 +1,6 @@
 <h1>Sauvegardes</h1>
 <div id="backups" data-keep="<?= (int) $keep ?>">
-  <p class="muted">Sauvegarde complète de la base (fichier compressé avec somme de contrôle). Les <?= (int) $keep ?> plus récentes sont conservées. Ces fichiers contiennent toutes les données, y compris les condensats de mots de passe : ne les partagez pas.</p>
+  <p class="muted">Sauvegarde complète de la base (fichier compressé avec somme de contrôle). Les <?= (int) $keep ?> plus récentes sont conservées. Ces fichiers contiennent toutes les données, y compris les condensats de mots de passe : ne les partagez pas. Avec une clé <code>BACKUP_KEY</code>, ils sont chiffrés (AES-256-GCM) : conservez cette clé hors du serveur, sans elle ils sont illisibles.</p>
   <div class="manage-toolbar"><button class="btn btn-primary" type="button" id="b-create">Créer une sauvegarde</button></div>
   <div class="alert alert-error" id="b-err" role="alert" hidden></div>
   <div id="b-results" aria-live="polite"></div>

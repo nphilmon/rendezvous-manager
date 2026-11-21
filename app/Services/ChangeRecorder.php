@@ -12,6 +12,12 @@ final class ChangeRecorder
     {
     }
 
+    /** Entrée d'audit seule (sans effet sur la synchronisation), avec détails : ex. changement de droits d'un calendrier. @param array<string,mixed> $details */
+    public function auditOnly(string $action, int $userId, string $entity, int $id, ?string $ip, array $details): void
+    {
+        $this->audit->log($action, $userId, $entity, $id, $ip, $details);
+    }
+
     public function record(string $entity, int $id, string $change, int $userId, ?string $ip, ?int $calendarId = null): void
     {
         $this->pdo->prepare('INSERT INTO sync_changes (calendar_id, entity_type, entity_id, change_type, changed_by, created_at) VALUES (?, ?, ?, ?, ?, ?)')

@@ -128,7 +128,13 @@ php workers/backup_worker.php                      # crée et vérifie une sauve
 ls -l storage/backups                              # fichier .sql.gz + .json, droits 0600
 php scripts/restore.php storage/backups/rvm-….sql.gz   # vérification seule, rien n'est modifié
 ```
-**Testez une restauration sur une base distincte** (cahier des charges § 22) : créez une base `…_restauration`, pointez temporairement un `.env` de test dessus, puis `php scripts/restore.php <fichier> --yes`, et comparez le nombre de lignes (`php scripts/deploy_check.php`, page *Utilisateurs*, un rendez-vous). Copiez régulièrement `storage/backups/` **hors du serveur**. Les sauvegardes ne sont pas chiffrées (limite connue) : chiffrez la copie externe (`gpg -c fichier`).
+**Chiffrement** : générez la clé (`php scripts/generate_backup_key.php`), **copiez-la immédiatement hors du serveur** (gestionnaire de mots de passe) : sans elle les sauvegardes chiffrées sont illisibles. Les prochaines sauvegardes sont chiffrées (`.sql.gz.enc`) ; les anciennes restent lisibles. `php scripts/deploy_check.php` signale l'absence de clé.
+
+**Testez une restauration sur une base distincte** (cahier des charges § 22) : créez une seconde base (sur cPanel : Bases de données MySQL, et liez-y l'utilisateur de l'application avec tous les privilèges), puis :
+```bash
+php scripts/restore.php <fichier> --yes --database=<autre_base>     # la base de production n'est pas touchée
+```
+Comparez le contenu de la base restaurée (page de l'application pointée dessus, ou phpMyAdmin). Sur un autre serveur, il faut la même `BACKUP_KEY` dans son `.env`. Copiez régulièrement `storage/backups/` **hors du serveur**.
 
 ## 19. Tester les calendriers
 

@@ -66,7 +66,8 @@ Page **Import / export**.
 - **Utilisateurs** : créer un compte (le mot de passe provisoire s'affiche **une seule fois** : notez-le et transmettez-le de façon sûre), modifier, changer le rôle, désactiver/réactiver, réinitialiser un mot de passe, débloquer, déconnecter de force.
 - **Rôles** : Administrateur (tout), Responsable (tous les calendriers, catégories, rapports, journal, import/export), Utilisateur (ses calendriers et ceux partagés), Lecture seule (consultation seulement).
 - **Historique** : journal d'audit filtrable (qui, quoi, quand).
-- **Sauvegardes** : créer, vérifier, télécharger, supprimer ; la restauration se fait en ligne de commande par l'exploitant (`docs/installation.md`).
+- **Sauvegardes** : créer, vérifier, télécharger, supprimer (la colonne « Chiffrée » indique si le fichier est chiffré ; les fichiers `.enc` ne se lisent qu'avec la clé `BACKUP_KEY`) ;
+- **État du serveur** (Paramètres, en bas) : versions de l'application, de PHP et de la base, migrations, file de notifications, espace libre et contrôles de configuration ; la restauration se fait en ligne de commande par l'exploitant (`docs/installation.md`).
 
 ## Raccourcis et accessibilité
 

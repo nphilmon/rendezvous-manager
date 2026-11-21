@@ -88,6 +88,29 @@
       });
     });
 
+    // État du serveur (administrateur)
+    var sys = $('sys-body');
+    function loadSys() {
+      if (!sys) return;
+      api('GET', '/api/v1/system').then(function (r) {
+        sys.textContent = '';
+        if (!r.ok) { sys.appendChild(el('p', 'alert alert-error', errText(r, 'Chargement impossible.'))); return; }
+        var d = r.data.data, dl = el('dl', 'kv');
+        var rows = [['Application', d.app.name + ' ' + d.app.version + ' (' + d.app.environment + ')'], ['PHP', d.php.version + ' — ' + Object.keys(d.php.extensions).map(function (k) { return k + (d.php.extensions[k] ? ' ✓' : ' ✗'); }).join(', ')],
+          ['Base de données', d.database.version + ' (' + d.database.charset + ')'], ['Migrations', d.database.migrations_applied + ' appliquées, dernière ' + d.database.migration_latest + (d.database.migrations_pending.length ? ' — EN ATTENTE : ' + d.database.migrations_pending.join(', ') : ' — schéma à jour')],
+          ['Notifications', d.notifications.pending + ' en attente, ' + d.notifications.failed + ' en échec, ' + d.notifications.push_subscriptions + ' appareil(s) push'],
+          ['Données', d.counts.users + ' utilisateur(s) actif(s), ' + d.counts.calendars + ' calendrier(s), ' + d.counts.appointments + ' rendez-vous'],
+          ['Espace libre', d.storage_free_mb === null ? 'inconnu' : d.storage_free_mb + ' Mo'], ['Heure du serveur (UTC)', d.time_utc]];
+        rows.forEach(function (p) { dl.append(el('dt', '', p[0]), el('dd', '', p[1])); });
+        sys.appendChild(dl);
+        sys.appendChild(el('h3', 'sub-h', 'Contrôles'));
+        var ul = el('ul', 'tr-list'), icon = { ok: '✔', warn: '⚠', fail: '✘' };
+        d.checks.forEach(function (c) { var li = el('li', c.level === 'fail' ? 'bad' : '', icon[c.level] + ' ' + c.message); ul.appendChild(li); });
+        sys.appendChild(ul);
+      });
+    }
+    if (sys) { loadSys(); $('sys-refresh').addEventListener('click', loadSys); }
+
     // Organisation (administrateur)
     var of = $('org-form'); if (!of) return;
     build($('org-fields'), 'o-', false);
