@@ -78,9 +78,9 @@
 
   // =========================================================== CONTACTS ============================================
   function contacts() {
-    var q = '', page = 1, sort = 'name', dir = 'asc';
+    var q = (new URLSearchParams(location.search).get('q') || '').slice(0, 200), page = 1, sort = 'name', dir = 'asc';
     var form = el('form', 'search-inline'); form.setAttribute('role', 'search');
-    var qi = el('input'); qi.type = 'search'; qi.placeholder = 'Rechercher un contact…'; qi.maxLength = 200; qi.setAttribute('aria-label', 'Rechercher un contact');
+    var qi = el('input'); qi.type = 'search'; qi.placeholder = 'Rechercher un contact…'; qi.maxLength = 200; qi.setAttribute('aria-label', 'Rechercher un contact'); qi.value = q;
     var sb = el('button', 'btn', 'Rechercher'); sb.type = 'submit'; form.append(qi, sb); toolbar.appendChild(form);
     form.addEventListener('submit', function (e) { e.preventDefault(); q = qi.value.trim(); page = 1; load(); });
     if (canWrite) { var nb = el('button', 'btn btn-primary', 'Nouveau contact'); nb.type = 'button'; nb.addEventListener('click', function () { edit(null); }); toolbar.appendChild(nb); }

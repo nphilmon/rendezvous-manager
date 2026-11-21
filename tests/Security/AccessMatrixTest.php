@@ -152,6 +152,9 @@ final class AccessMatrixTest extends DatabaseTestCase
             ['GET /api/v1/settings', [], ['ok', 'ok', 'ok', 'ok']],
             ['GET /api/v1/settings/global', [], ['ok', 403, 403, 403]],
             ['GET /api/v1/system', [], ['ok', 403, 403, 403]],
+            ['GET /api/v1/reports', [], ['ok', 'ok', 403, 403]],
+            ['GET /api/v1/reminders', [], ['ok', 'ok', 'ok', 'ok']],
+            ['GET /api/v1/search/facets', [], ['ok', 'ok', 'ok', 'ok']],
             ['PUT /api/v1/settings/global', [], ['ok', 403, 403, 403]],
             ['GET /api/v1/notifications', [], ['ok', 'ok', 'ok', 'ok']],
         ];

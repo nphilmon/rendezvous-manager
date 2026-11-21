@@ -28,7 +28,8 @@ Chaque critère du § 27 est relié à ce qui le vérifie. **Vérifié automatiq
 | 22 | Permissions | `AccessMatrixTest` (toutes les routes, quatre rôles), `AuthTest`, tests de chaque API | Automatique |
 | 23 | Administration avec phpMyAdmin | `docs/phpmyadmin.md`, `docs/serveur_linux.md` § 5 | **Documenté, non installé ni testé ici** |
 | 24 | Sauvegardes (automatiques, manuelles, chiffrées, versionnées, vérifiées, restaurables) | `BackupAuditTest`, `BackupEncryptionTest` (chiffrement, altération, troncature, mauvaise clé), `audit.e2e.js` ; restauration vers une autre base répétée de bout en bout ; sauvegarde réelle en production | Automatique + réel (restauration réelle en production non exercée volontairement) |
-| 25 | Ordinateur et mobile | captures et tests à 390 px (menu mobile, calendrier, tactile) | Émulation Chromium ; **aucun appareil réel** |
+| 25 | Recherche et filtres (§ 20), rapports (§ 5), rappels (§ 18) | `SearchRemindersTest` (recherche globale, filtres combinés, rappels), `ReportsTest`, `appointments.e2e.js`, `reports.e2e.js` | Automatique |
+| 26 | Ordinateur et mobile | captures et tests à 390 px (menu mobile, calendrier, tactile) | Émulation Chromium ; **aucun appareil réel** |
 
 ## Tests obligatoires (§ 24)
 

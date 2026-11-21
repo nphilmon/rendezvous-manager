@@ -126,6 +126,7 @@ final class PageTest extends DatabaseTestCase
                 $key === 'transfer' => $this->pages->transfer($req),
                 $key === 'users' => $this->pages->users($req),
                 $key === 'history' => $this->pages->history($req),
+                $key === 'reports' => $this->pages->reports($req),
                 $key === 'backups' => $this->pages->backups($req),
                 in_array($key, ['all', 'mine', 'today', 'upcoming'], true) => $this->pages->appointments($req, $key),
                 in_array($key, ['contacts', 'categories', 'calendars', 'notifications'], true) => $this->pages->manage($req, $key),

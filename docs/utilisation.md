@@ -30,6 +30,14 @@ Champs : titre, début et fin (ou « journée entière »), fuseau horaire, cale
 
 **Listes** : *Mes rendez-vous*, *Tous les rendez-vous*, *Aujourd'hui*, *À venir*, avec recherche, filtres (statut, priorité, catégorie, période), tri et pagination.
 
+## Recherche et filtres
+
+La barre de recherche en haut ouvre la liste des rendez-vous filtrée (titre, description, lieu) et signale les **contacts** qui correspondent. La page *Tous les rendez-vous* combine les filtres : texte, calendrier, **catégorie**, **contact**, **créé par**, statut, priorité, période (du / au), tri et corbeille ; chaque filtre se cumule avec les autres.
+
+## Rapports (responsable et administrateur)
+
+Menu **Rapports** : choisissez une période (ce mois, 30 derniers jours, cette année, ou dates libres, 366 jours au plus). Le rapport donne le nombre de rendez-vous, terminés et annulés (avec leur part en %), les heures planifiées, les journées entières, puis les répartitions par statut, priorité, catégorie, calendrier, créateur, principaux contacts, jour de la semaine, heure de début et mois. Chaque graphique a une alternative « tableau » ; **Exporter en CSV** télécharge les mêmes chiffres. Un rendez-vous compte dans la période où il commence ; les séries sont comptées occurrence par occurrence ; les heures sont celles de votre fuseau.
+
 ## Contacts, catégories, calendriers
 
 - **Contacts** : fiche (nom, société, téléphone, e-mail, adresse, notes) avec ses rendez-vous liés. Chacun gère ses propres contacts.

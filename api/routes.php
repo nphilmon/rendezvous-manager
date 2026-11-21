@@ -11,6 +11,10 @@ use App\Controllers\AuditApiController;
 use App\Controllers\BackupApiController;
 use App\Repositories\AuditRepository;
 use App\Services\Backup\BackupService;
+use App\Controllers\ReminderApiController;
+use App\Controllers\ReportApiController;
+use App\Services\ReportService;
+use App\Controllers\SearchApiController;
 use App\Controllers\SystemApiController;
 use App\Controllers\UserApiController;
 use App\Services\UserAdminService;
@@ -156,6 +160,23 @@ return static function (Router $r, ?\PDO $injected = null): void {
         [$pdo, $guard] = $deps();
         return (new SystemApiController($guard, $pdo, dirname(__DIR__)))->show($q);
     });
+    $r->add('GET', '/api/v1/reports', static function (Request $q) use ($deps): Response {
+        [$pdo, $guard, $perms] = $deps();
+        return (new ReportApiController($guard, new ReportService($pdo, $perms, new AppointmentRepository($pdo)), new AuditLogger($pdo)))->show($q);
+    });
+    $search = static function () use ($deps): SearchApiController {
+        [$pdo, $guard, $perms] = $deps();
+        return new SearchApiController($guard, $pdo, $perms, new AppointmentRepository($pdo), new ContactRepository($pdo));
+    };
+    $r->add('GET', '/api/v1/search', static fn (Request $q) => $search()->search($q));
+    $r->add('GET', '/api/v1/search/facets', static fn (Request $q) => $search()->facets($q));
+    $reminders = static function () use ($deps): ReminderApiController {
+        [$pdo, $guard, $perms] = $deps();
+        return new ReminderApiController($guard, $pdo, $perms, new AppointmentRepository($pdo), new SettingsRepository($pdo));
+    };
+    $r->add('GET', '/api/v1/reminders', static fn (Request $q) => $reminders()->index($q));
+    $r->add('POST', '/api/v1/reminders', static fn (Request $q) => $reminders()->store($q));
+    $r->add('DELETE', '/api/v1/reminders/{id}', static fn (Request $q, array $p) => $reminders()->destroy($q, $p));
     $r->add('GET', '/api/v1/settings/global', static fn (Request $q) => $settingsCtl()->showGlobal($q));
     $r->add('PUT', '/api/v1/settings/global', static fn (Request $q) => $settingsCtl()->updateGlobal($q));
     $r->add('GET', '/api/v1/calendars', static fn (Request $q) => $cal()->calendars($q));

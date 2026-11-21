@@ -87,6 +87,12 @@ Statuts : `scheduled`, `confirmed`, `tentative`, `completed`, `cancelled`. Prior
 
 | Route | Droit | Rôle de la route |
 |---|---|---|
+| `GET /api/v1/reminders` | `appointments.read` | **vos** rappels (un par rendez-vous et délai, avec les canaux) ; `appointment_id`, `page`, `per_page` |
+| `POST /api/v1/reminders` | `appointments.read` | `{appointment_id, minutes}` : définit (remplace) votre rappel sur un rendez-vous que vous pouvez lire ; 404 sinon |
+| `DELETE /api/v1/reminders/{id}` | `appointments.read` | retire votre rappel sur le rendez-vous d'identifiant `{id}` |
+| `GET /api/v1/search` | `appointments.read` | recherche globale `?q=` (2 à 100 caractères) : 8 rendez-vous et 8 contacts au plus, avec le total de chacun ; uniquement les calendriers lisibles et vos contacts |
+| `GET /api/v1/search/facets` | `appointments.read` | créateurs des rendez-vous visibles (filtre « créé par ») |
+| `GET /api/v1/reports` | `reports.view` | rapports d'activité : `from`, `to` (AAAA-MM-JJ, au plus 366 jours, fuseau de l'utilisateur), `format=json\|csv` ; totaux, taux, heures, répartitions par statut, priorité, catégorie, calendrier, créateur, jour, heure, mois, principaux contacts ; calendriers autorisés seulement |
 | `GET /api/v1/dashboard` | `appointments.read` | compteurs, prochain rendez-vous, répartitions ; `period` = `week` \| `month` \| `30d` \| `year` |
 | `GET /api/v1/sync/changes` | `appointments.read` | `?cursor=N` : nature des changements visibles (type, identifiant, action) — jamais de contenu ; `reset: true` si le curseur est inconnu |
 | `GET /api/v1/notifications` | session | centre de notifications (filtres, pagination) |

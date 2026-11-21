@@ -3,6 +3,9 @@
   <form id="filters" class="filters" role="search" aria-label="Filtres">
     <div class="fld"><label for="f-q">Recherche</label><input id="f-q" name="q" type="search" maxlength="200" placeholder="Titre, description, lieu…"></div>
     <div class="fld"><label for="f-cal">Calendrier</label><select id="f-cal" name="calendar"><option value="">Tous</option></select></div>
+    <div class="fld"><label for="f-cat">Catégorie</label><select id="f-cat" name="category"><option value="">Toutes</option></select></div>
+    <div class="fld"><label for="f-con">Contact</label><select id="f-con" name="contact"><option value="">Tous</option></select></div>
+    <div class="fld"><label for="f-by">Créé par</label><select id="f-by" name="created_by"><option value="">Tous</option></select></div>
     <div class="fld"><label for="f-status">Statut</label><select id="f-status" name="status"><option value="">Tous</option>
       <?php foreach ($statuses as $k => $l): ?><option value="<?= $e($k) ?>"><?= $e($l) ?></option><?php endforeach; ?></select></div>
     <div class="fld"><label for="f-prio">Priorité</label><select id="f-prio" name="priority"><option value="">Toutes</option>
@@ -15,6 +18,7 @@
     <label class="check"><input type="checkbox" name="trash" value="1"> Corbeille</label>
     <div class="filter-actions"><button class="btn btn-primary" type="submit">Filtrer</button><button class="btn" type="reset">Réinitialiser</button></div>
   </form>
+  <p id="search-contacts" class="notice" hidden></p>
   <div id="list-results" aria-live="polite"></div>
   <div id="list-pager" class="pager"></div>
   <noscript><p class="notice">JavaScript est nécessaire pour afficher la liste.</p></noscript>

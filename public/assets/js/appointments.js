@@ -337,7 +337,7 @@
     var summary = el('div', 'alert alert-error'); summary.id = 'af-summary'; summary.setAttribute('role', 'alert'); summary.hidden = true; form.appendChild(summary);
     var conflictBox = el('div', 'alert af-conflict'); conflictBox.id = 'af-conflict'; conflictBox.setAttribute('role', 'alert'); conflictBox.hidden = true; form.appendChild(conflictBox);
 
-    var title = input('text', { maxlength: 200, required: 'required', autocomplete: 'off', 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-bwignore': 'true' }); // les gestionnaires de mots de passe n'ont rien à proposer ici title.value = a ? a.title : '';
+    var title = input('text', { maxlength: 200, required: 'required', autocomplete: 'off', 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-bwignore': 'true' }); title.value = a ? a.title : ''; // les gestionnaires de mots de passe n'ont rien à proposer ici
     form.appendChild(field('Titre', title, 'af-title-in'));
     var desc = el('textarea'); desc.rows = 3; desc.maxLength = 10000; desc.value = a && a.description ? a.description : '';
     form.appendChild(field('Description', desc, 'af-desc'));
@@ -674,6 +674,9 @@
     if (f.calendar.value) p.set('calendars', f.calendar.value);
     if (f.status.value) p.set('status', f.status.value);
     if (f.priority.value) p.set('priority', f.priority.value);
+    if (f.category.value) p.set('category_id', f.category.value);
+    if (f.contact.value) p.set('contact_id', f.contact.value);
+    if (f.created_by.value) p.set('created_by', f.created_by.value);
     var from = f.from.value ? isoUtc(unwall(parseWall(f.from.value, '00:00'))) : null;
     var to = f.to.value ? isoUtc(unwall(parseWall(f.to.value, '00:00') + DAY)) : null;
     if (scope === 'mine') p.set('mine', '1');
@@ -733,9 +736,27 @@
 
   filters.addEventListener('submit', function (e) { e.preventDefault(); currentPage = 1; load(); });
   filters.addEventListener('reset', function () { setTimeout(function () { currentPage = 1; load(); }, 0); });
-  ['status', 'priority', 'calendar', 'sort', 'dir', 'trash'].forEach(function (n) { filters.elements[n].addEventListener('change', function () { currentPage = 1; load(); }); });
+  ['status', 'priority', 'calendar', 'category', 'contact', 'created_by', 'sort', 'dir', 'trash'].forEach(function (n) { filters.elements[n].addEventListener('change', function () { currentPage = 1; load(); }); });
   document.addEventListener('rvm:appointments-changed', load);
   document.addEventListener('rvm:sync', function (e) { if (window.RVM.sync.touches(e.detail, ['appointment', 'calendar'])) load(); });
+  function fillSelect(sel, items, labelKey) {
+    items.forEach(function (x) { var o = el('option', '', x[labelKey]); o.value = x.id; sel.appendChild(o); });
+  }
+  // listes proposées par les filtres : catégories, contacts (les 100 premiers par nom) et créateurs des rendez-vous visibles
+  api('GET', '/api/v1/categories').then(function (r) { if (r.ok) fillSelect(filters.elements.category, r.data.data, 'name'); });
+  api('GET', '/api/v1/contacts?per_page=100&sort=name').then(function (r) { if (r.ok) fillSelect(filters.elements.contact, r.data.data.map(function (c) { return { id: c.id, name: c.name }; }), 'name'); });
+  api('GET', '/api/v1/search/facets').then(function (r) { if (r.ok) fillSelect(filters.elements.created_by, r.data.data.creators, 'name'); });
+  // recherche globale : les contacts qui correspondent sont signalés au-dessus des résultats
+  (function () {
+    var q = new URLSearchParams(location.search).get('q'), box = document.getElementById('search-contacts');
+    if (!q || q.trim().length < 2 || !box) return;
+    api('GET', '/api/v1/search?q=' + encodeURIComponent(q.trim())).then(function (r) {
+      if (!r.ok || !r.data.data.contacts.total) return;
+      var c = r.data.data.contacts; box.hidden = false; box.textContent = 'Contacts correspondants : ';
+      c.items.slice(0, 5).forEach(function (x, i) { if (i) box.appendChild(document.createTextNode(', ')); var a = el('a', '', x.name); a.href = '/contacts?q=' + encodeURIComponent(q.trim()); box.appendChild(a); });
+      if (c.total > 5) box.appendChild(document.createTextNode(' … (' + c.total + ' au total)'));
+    });
+  })();
   qsInit();
   calendars().then(function (cals) {
     calList = cals;

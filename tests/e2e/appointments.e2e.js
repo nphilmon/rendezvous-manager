@@ -60,6 +60,8 @@ const check = (ok, msg) => { console.log((ok ? '  ok    ' : '  FAIL  ') + msg); 
   await p.click('.tg-col .ev:has-text("Créé par sélection")'); await p.waitForSelector('dialog.ev-dialog[open]');
   await p.click('.dlg-actions >> text=Modifier'); await p.waitForSelector('.form-dialog[open]');
   check((await p.textContent('#af-title')).includes('Modifier'), 'détails → Modifier ouvre le formulaire d\'édition');
+  check(await p.inputValue('#af-title-in') === 'Créé par sélection', 'le formulaire d\'édition est pré-rempli (titre, ' + await p.inputValue('#af-title-in') + ')');
+  check(await p.inputValue('#af-sd') !== '' && await p.inputValue('#af-st') !== '' && (await p.locator('#af-cal').inputValue()) !== '', 'dates, heures et calendrier pré-remplis');
   const id = await p.evaluate(async () => { const r = await fetch('/api/v1/appointments?q=' + encodeURIComponent('Créé par sélection')); return (await r.json()).data[0].id; });
   await p.evaluate(async (id) => { // un autre utilisateur modifie entre-temps
     const csrf = document.querySelector('meta[name=csrf-token]').content;
@@ -97,6 +99,16 @@ const check = (ok, msg) => { console.log((ok ? '  ok    ' : '  FAIL  ') + msg); 
   await p.click('#filters >> text=Réinitialiser'); await p.waitForFunction(() => document.querySelectorAll('#list-results tbody tr').length > 5);
   await p.selectOption('#f-status', 'tentative'); await p.waitForFunction(() => document.querySelectorAll('#list-results tbody tr').length === 1);
   check(true, 'filtre par statut');
+  await p.selectOption('#f-status', ''); await p.waitForFunction(() => document.querySelectorAll('#list-results tbody tr').length > 5);
+  check(await p.locator('#f-cat option').count() >= 2 && await p.locator('#f-by option').count() >= 2, 'filtres Catégorie, Contact et Créé par alimentés par le serveur');
+  const catId = await p.evaluate(() => document.querySelector('#f-cat option:nth-child(2)').value);
+  await p.selectOption('#f-cat', catId); await p.waitForTimeout(600);
+  const withCat = await p.locator('#list-results tbody tr').count();
+  check(withCat >= 1 && withCat < 14, 'filtre par catégorie : liste réduite (' + withCat + ' ligne(s))');
+  await p.selectOption('#f-cat', ''); await p.selectOption('#f-status', 'tentative'); await p.waitForFunction(() => document.querySelectorAll('#list-results tbody tr').length === 1);
+  // recherche globale : l'en-tête mène à la liste filtrée et signale les contacts
+  await p.goto(BASE + '/appointments?q=Cliente'); await p.waitForSelector('#list-results .tbl, #list-results .empty');
+  check(true, 'recherche globale depuis l\'adresse (?q=)');
   await p.goto(BASE + '/appointments/mine'); await p.waitForSelector('#list-results .tbl');
   check(await p.locator('#list-results tbody tr').count() >= 10, 'Mes rendez-vous : liste chargée');
   await p.goto(BASE + '/appointments/new'); await p.waitForSelector('.form-dialog[open]'); check(true, '/appointments/new ouvre le formulaire');
