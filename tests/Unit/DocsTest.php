@@ -10,7 +10,7 @@ use Tests\TestCase;
 final class DocsTest extends TestCase
 {
     private string $root;
-    private const DOCS = ['installation.md', 'configuration_mysql.md', 'phpmyadmin.md', 'api.md', 'securite.md', 'utilisation.md', 'notifications.md', 'deploiement.md'];
+    private const DOCS = ['installation.md', 'configuration_mysql.md', 'phpmyadmin.md', 'api.md', 'securite.md', 'utilisation.md', 'notifications.md', 'deploiement.md', 'serveur_linux.md', 'recette.md'];
 
     public function setUp(): void
     {
