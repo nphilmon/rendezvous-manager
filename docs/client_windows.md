@@ -1,9 +1,6 @@
 # Client Windows (programme .exe)
 
-> **État : code écrit, non compilé et non exécuté par son auteur.** L'environnement de développement ne
-> fournit ni .NET ni Windows : ni la compilation ni le fonctionnement n'ont pu être vérifiés. La première
-> compilation se fait sur un serveur Windows de GitHub (workflow ci-dessous) ; un échec de compilation est
-> possible et se corrige à partir du journal. Faites la recette du dernier paragraphe avant tout usage.
+> **État :** compilé avec succès par GitHub Actions (exécution du 21/11/2026, .NET 8) et lancé par le propriétaire du projet sur son poste Windows : la fenêtre s'ouvre et l'application fonctionne. Les autres points de la recette en fin de document (export, second lancement, zone de notification, réseau coupé) n'ont **pas** été confirmés un par un. Le code n'a jamais été exécuté par son auteur (pas de Windows ni de .NET dans son environnement).
 
 ## Ce que c'est
 
