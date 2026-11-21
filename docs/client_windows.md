@@ -1,6 +1,6 @@
 # Client Windows (programme .exe)
 
-> **État :** compilé avec succès par GitHub Actions (exécution du 21/11/2026, .NET 8) et lancé par le propriétaire du projet sur son poste Windows : la fenêtre s'ouvre et l'application fonctionne. Les autres points de la recette en fin de document (export, second lancement, zone de notification, réseau coupé) n'ont **pas** été confirmés un par un. Le code n'a jamais été exécuté par son auteur (pas de Windows ni de .NET dans son environnement).
+> **État :** compilé avec succès par GitHub Actions (exécution du 21/11/2026, .NET 8) et essayé par le propriétaire du projet sur son poste Windows : la fenêtre s'ouvre, l'application fonctionne et les autres points de la recette en fin de document ont été confirmés fonctionnels (déclaration de l'utilisateur, sans détail par point). Essayé sur un seul poste ; le code n'a jamais été exécuté par son auteur (pas de Windows ni de .NET dans son environnement).
 
 ## Ce que c'est
 
@@ -44,7 +44,7 @@ Par défaut : `https://agenda.nicolasphilmon.fr/`. Pour une autre adresse, crée
   « cadre » du programme est figé).
 - Programme non signé (voir ci-dessus).
 
-## Recette à faire sur un poste Windows
+## Recette (confirmée sur un poste Windows)
 
 - [ ] Le programme se lance, affiche la page de connexion sans avertissement de certificat.
 - [ ] Connexion, création, déplacement et suppression d'un rendez-vous.
