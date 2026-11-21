@@ -259,6 +259,7 @@
       bar.appendChild(el('span', 't', ev.raw.title));
       bar.style.gridColumn = (it.a + 2) + ' / ' + (it.b + 3); bar.style.gridRow = String(it.lane + 1);
       allday.appendChild(bar);
+      if (editable(ev)) addBarHandles(bar, ev, ev.s >= days[it.a], ev.e <= days[it.b] + DAY);
       if (editable(ev)) makeDayDraggable(bar, ev, function (down) {
         var found = days[it.a];
         allday.querySelectorAll('.allday-cell').forEach(function (c) { var r = c.getBoundingClientRect(); if (down.clientX >= r.left && down.clientX < r.right) found = +c.dataset.day; });
@@ -377,6 +378,7 @@
           bar.appendChild(el('span', 't', ev.raw.title));
           bar.style.gridColumn = (it.a + 1) + ' / ' + (it.b + 2); bar.style.gridRow = String(it.lane + 1);
           bars.appendChild(bar);
+          if (editable(ev)) addBarHandles(bar, ev, ev.s >= wd[it.a], ev.e <= wd[it.b] + DAY);
           if (editable(ev)) makeDayDraggable(bar, ev, function (down) {
             var found = wd[it.a];
             week.querySelectorAll('.mg-cell').forEach(function (c) { var rc = c.getBoundingClientRect(); if (down.clientX >= rc.left && down.clientX < rc.right) found = +c.dataset.day; });
@@ -548,6 +550,40 @@
   }
 
   /** Chips « journée entière » et lignes du mois : déplacement par jours (la durée et l'heure sont conservées). */
+  /** Jour (cellule [data-day] de la rangée « journée » ou du mois) sous le pointeur, ou null. */
+  function dayCellAt(x, y) {
+    var all = document.elementsFromPoint(x, y);
+    for (var i = 0; i < all.length; i++) {
+      var c = all[i].closest ? all[i].closest('[data-day]') : null;
+      if (c) return c.classList.contains('tg-col') ? null : c;
+    }
+    return null;
+  }
+
+  /** Poignées (flèches) aux deux extrémités d'une barre « journée entière » : glisser pour avancer le début ou prolonger/raccourcir la fin. */
+  function addBarHandles(bar, ev, leftOk, rightOk) {
+    [['l', leftOk], ['r', rightOk]].forEach(function (side) {
+      if (!side[1]) return; // une extrémité qui dépasse la période affichée ne se règle pas ici
+      var h = el('span', 'rs-h rs-h-' + side[0]); h.setAttribute('aria-hidden', 'true'); bar.appendChild(h);
+      h.addEventListener('pointerdown', function (down) {
+        down.stopPropagation(); // ne pas déclencher le déplacement de toute la barre
+        var res = { s: ev.s, e: ev.e }, hl = null;
+        function clear() { if (hl) hl.classList.remove('drop-target'); hl = null; }
+        pointerDrag(down, bar, {
+          onMove: function (e) {
+            var cell = dayCellAt(e.clientX, e.clientY); clear();
+            if (!cell) { res.s = ev.s; res.e = ev.e; return; }
+            hl = cell; cell.classList.add('drop-target');
+            var d = +cell.dataset.day;
+            if (side[0] === 'r') { res.s = ev.s; res.e = Math.max(d + DAY, ev.s + DAY); } else { res.s = Math.min(d, ev.e - DAY); res.e = ev.e; }
+          },
+          onDrop: function () { clear(); if (res.s === ev.s && res.e === ev.e) return; commit(ev, res.s, res.e, 'Durée modifiée.'); },
+          onCancel: clear
+        });
+      });
+    });
+  }
+
   function makeDayDraggable(b, ev, day) {
     b.classList.add('editable');
     b.addEventListener('pointerdown', function (down) {
@@ -573,7 +609,10 @@
     return function (e) {
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
       var k = e.key, step = settings.step * 60000, s = ev.s, en = ev.e, msg = 'Rendez-vous déplacé.';
-      if (k === 'ArrowLeft' || k === 'ArrowRight') { var d = (k === 'ArrowRight' ? 1 : -1) * DAY; s += d; en += d; }
+      if (k === 'ArrowLeft' || k === 'ArrowRight') {
+        var d = (k === 'ArrowRight' ? 1 : -1) * DAY;
+        if (e.shiftKey && ev.allDay) { en = Math.max(ev.s + DAY, ev.e + d); msg = 'Durée modifiée.'; } else { s += d; en += d; }
+      }
       else if ((k === 'ArrowUp' || k === 'ArrowDown') && timed && !ev.allDay) {
         var dir = k === 'ArrowDown' ? 1 : -1;
         if (e.shiftKey) { en = Math.max(ev.s + step, ev.e + dir * step); msg = 'Durée modifiée.'; } else { s += dir * step; en += dir * step; }

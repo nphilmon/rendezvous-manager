@@ -115,3 +115,7 @@ Seul le texte saisi dans *Adresse* (type « Sur place ») est transmis, par le s
 - **Format de l'heure** : 24 heures ou 12 heures (déjà existant), appliqué aussi aux rappels du serveur.
 
 Les champs de date des formulaires (sélecteur du navigateur) suivent la langue du navigateur et non ce réglage. Un administrateur peut définir ces valeurs par défaut pour toute l'organisation.
+
+### Étirer ou réduire un rendez-vous « journée entière »
+
+Au survol d'une barre « journée entière » (semaine, jour ou mois), une petite **flèche** apparaît à chaque extrémité : glissez la flèche de gauche pour avancer ou reculer le début, celle de droite pour prolonger ou raccourcir la fin (le jour sous le pointeur est inclus). Sans souris : **Alt + Maj + ←/→** modifie la fin d'un jour, **Alt + ←/→** déplace toute la barre. Une extrémité qui dépasse la période affichée (barre terminée par une pointe) se règle depuis la période où elle se trouve.

@@ -111,6 +111,23 @@ async function openWeek(page) {
   const s1 = await appt(p, 'Séminaire');
   check(s1.start === '2026-11-21T00:00:00Z' && s1.end === '2026-11-23T00:00:00Z' && s0.all_day && s1.all_day, 'journée entière : décalée de 2 jours, reste « journée entière »');
 
+  // 9b. journée entière : poignées de redimensionnement (flèches aux extrémités de la barre)
+  const bar = () => p.locator('.tg-allday .ev.bar:has-text("Séminaire")').first();
+  let hb = await bar().boundingBox(); await bar().hover();
+  check(await p.locator('.tg-allday .ev.bar:has-text("Séminaire") .rs-h').count() === 2, 'barre « journée entière » : deux poignées (début et fin)');
+  const cellBox = async i => p.locator('.allday-cell').nth(i).boundingBox();
+  const thu = await cellBox(3), sat = await cellBox(5);
+  await drag(p, { x: hb.x + 5, y: hb.y + hb.height / 2 }, { x: thu.x + thu.width / 2, y: hb.y + hb.height / 2 });
+  let s2 = await appt(p, 'Séminaire');
+  check(s2.start === '2026-11-19T00:00:00Z' && s2.end === '2026-11-23T00:00:00Z' && s2.all_day, 'poignée de gauche : début avancé au jeudi, fin inchangée');
+  hb = await bar().boundingBox();
+  await drag(p, { x: hb.x + hb.width - 5, y: hb.y + hb.height / 2 }, { x: sat.x + sat.width / 2, y: hb.y + hb.height / 2 });
+  s2 = await appt(p, 'Séminaire');
+  check(s2.start === '2026-11-19T00:00:00Z' && s2.end === '2026-11-22T00:00:00Z', 'poignée de droite : fin raccourcie au samedi (inclus)');
+  await p.focus('.tg-allday .ev.bar:has-text("Séminaire")'); await p.keyboard.press('Alt+Shift+ArrowRight'); await p.waitForTimeout(700);
+  s2 = await appt(p, 'Séminaire');
+  check(s2.start === '2026-11-19T00:00:00Z' && s2.end === '2026-11-23T00:00:00Z', 'clavier : Alt+Maj+→ prolonge d\'un jour');
+
   // 10. vue mois : déplacement vers un autre jour en gardant l'heure
   await p.goto(BASE + '/calendar?view=month&date=2026-11-18'); await p.waitForSelector('.mg-cell .ev');
   const m0 = await appt(p, 'Mensuel A');

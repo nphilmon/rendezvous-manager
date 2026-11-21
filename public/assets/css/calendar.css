@@ -104,3 +104,12 @@ body.is-dragging,body.is-dragging *{cursor:grabbing!important;user-select:none}
 @media(pointer:coarse){.ev.blk .rs{height:14px}}
 .ev.editable{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .ev[data-recurring="1"] .tt::after{content:" ↻";opacity:.8;font-weight:400}
+
+/* Poignées de redimensionnement des barres « journée entière » (flèches aux deux extrémités) */
+.ev.bar .rs-h{position:absolute;top:0;bottom:0;width:12px;cursor:ew-resize;opacity:0;touch-action:none}
+.ev.bar .rs-h-l{left:0}.ev.bar .rs-h-r{right:0}
+.ev.bar .rs-h::after{content:'';position:absolute;top:50%;margin-top:-4px;border:4px solid transparent}
+.ev.bar .rs-h-l::after{left:1px;border-right-color:#fff}.ev.bar .rs-h-r::after{right:1px;border-left-color:#fff}
+.ev.bar:hover .rs-h,.ev.bar:focus-visible .rs-h,.ev.bar.dragging .rs-h{opacity:1}
+@media(pointer:coarse){.ev.bar .rs-h{opacity:.9;width:18px}}
+.ev.bar:has(.rs-h-l){padding-left:14px}.ev.bar:has(.rs-h-r){padding-right:14px}
