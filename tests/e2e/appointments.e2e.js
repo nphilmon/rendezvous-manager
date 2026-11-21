@@ -50,7 +50,7 @@ const check = (ok, msg) => { console.log((ok ? '  ok    ' : '  FAIL  ') + msg); 
   await p.mouse.up(); await p.waitForSelector('.form-dialog[open]');
   check(await p.inputValue('#af-st') === '14:00' && await p.inputValue('#af-et') === '16:00', 'glissement : 14:00 → 16:00 prérempli (' + await p.inputValue('#af-st') + ' → ' + await p.inputValue('#af-et') + ')');
   check(await p.locator('.form-dialog[open]').count() === 1, 'glissement : un seul formulaire ouvert');
-  await p.fill('#af-title-in', 'Créé par sélection'); await p.click('.af-actions >> text=Enregistrer et nouveau');
+  await p.fill('#af-title-in', 'Créé par sélection'); await p.click('.af-more > summary'); await p.click('.af-menu >> text=Enregistrer et nouveau');
   await p.waitForSelector('.tg-col .ev:has-text("Créé par sélection")');
   await p.waitForSelector('.form-dialog[open]'); check((await p.textContent('#af-title')).includes('Nouveau'), '« Enregistrer et nouveau » rouvre un formulaire vierge');
   check(await p.inputValue('#af-title-in') === '', 'formulaire vierge');

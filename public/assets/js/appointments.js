@@ -32,6 +32,11 @@
   function isoUtc(ms) { return new Date(ms).toISOString().slice(0, 19) + 'Z'; }
   function fmt(o, tz) { o.timeZone = tz || TZ; return new Intl.DateTimeFormat('fr-FR', o); }
 
+  /** Icône du sprite SVG de la page (symboles « i-… »). */
+  function ico(name) {
+    var NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), use = document.createElementNS(NS, 'use');
+    svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('class', 'af-ico'); use.setAttribute('href', '#i-' + name); svg.appendChild(use); return svg;
+  }
   function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
   function setColor(n, c) { n.style.setProperty('--c', /^#[0-9a-fA-F]{3,8}$/.test(c || '') ? c : '#2563eb'); }
 
@@ -358,7 +363,7 @@
   }
 
   function buildForm() {
-    formDlg = el('dialog', 'form-dialog'); formDlg.setAttribute('aria-labelledby', 'af-title');
+    formDlg = el('dialog', 'form-dialog af-wide'); formDlg.setAttribute('aria-labelledby', 'af-title');
     form = el('form', 'af'); form.noValidate = true;
     formDlg.appendChild(form);
     formDlg.addEventListener('close', function () { if (formOpener && document.contains(formOpener)) formOpener.focus(); });
@@ -404,24 +409,20 @@
       series: !!(a && a.recurring), scope: a && a.recurring ? opts.scope : null, occurrence: a && a.recurring ? (a.occurrence_start || a.start) : null, raw: a };
 
     var scopeLabel = { single: ' (cet événement)', following: ' (cet événement et les suivants)', all: ' (tous les événements)' }[state.scope] || '';
-    var head = el('div', 'dlg-head'), h = el('h2', '', (edit ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous') + scopeLabel); h.id = 'af-title';
-    var x = el('button', 'icon-btn', '×'); x.type = 'button'; x.setAttribute('aria-label', 'Fermer'); x.addEventListener('click', function () { formDlg.close(); });
-    head.append(h, x); form.appendChild(head);
-    var summary = el('div', 'alert alert-error'); summary.id = 'af-summary'; summary.setAttribute('role', 'alert'); summary.hidden = true; form.appendChild(summary);
-    var conflictBox = el('div', 'alert af-conflict'); conflictBox.id = 'af-conflict'; conflictBox.setAttribute('role', 'alert'); conflictBox.hidden = true; form.appendChild(conflictBox);
+    var summary = el('div', 'alert alert-error'); summary.id = 'af-summary'; summary.setAttribute('role', 'alert'); summary.hidden = true;
+    var conflictBox = el('div', 'alert af-conflict'); conflictBox.id = 'af-conflict'; conflictBox.setAttribute('role', 'alert'); conflictBox.hidden = true;
 
-    var title = input('text', { maxlength: 200, required: 'required', autocomplete: 'off', 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-bwignore': 'true' }); title.value = a ? a.title : ''; // les gestionnaires de mots de passe n'ont rien à proposer ici
-    form.appendChild(field('Titre', title, 'af-title-in'));
-    var desc = el('textarea'); desc.rows = 3; desc.maxLength = 10000; desc.value = a && a.description ? a.description : '';
-    form.appendChild(field('Description', desc, 'af-desc'));
+    // ---- Titre (grand champ souligné, comme dans un agenda classique) ----
+    var title = input('text', { maxlength: 200, required: 'required', autocomplete: 'off', placeholder: 'Ajouter un titre', 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-bwignore': 'true' }); title.value = a ? a.title : ''; // les gestionnaires de mots de passe n'ont rien à proposer ici
+    var fTitle = field('Titre', title, 'af-title-in'); fTitle.classList.add('af-titlefld');
 
+    // ---- Quand : dates et heures sur une ligne, « Toute la journée », répétition ----
     var adLabel = el('label', 'check'), ad = input('checkbox'); ad.id = 'af-allday'; ad.checked = allDay; adLabel.setAttribute('for', 'af-allday');
-    adLabel.append(ad, document.createTextNode(' Journée entière')); form.appendChild(adLabel);
-    var row1 = el('div', 'row2'), row2 = el('div', 'row2');
+    adLabel.append(ad, document.createTextNode(' Toute la journée'));
     var sd = input('date', { required: 'required' }), st = input('time', { step: 300 }), ed = input('date', { required: 'required' }), et = input('time', { step: 300 });
     sd.value = dateStr(sW); st.value = allDay ? '09:00' : timeStr(sW); ed.value = dateStr(eW); et.value = allDay ? '10:00' : timeStr(eW);
     var fsd = field('Date de début', sd, 'af-sd'), fst = field('Heure de début', st, 'af-st'), fed = field('Date de fin', ed, 'af-ed'), fet = field('Heure de fin', et, 'af-et');
-    row1.append(fsd, fst); row2.append(fed, fet); form.append(row1, row2);
+    var when = el('div', 'af-when'); when.append(fsd, fst, el('span', 'af-dash', '–'), fet, fed);
     function toggleAllDay() { fst.hidden = fet.hidden = ad.checked; state.allDay = ad.checked; }
     ad.addEventListener('change', toggleAllDay); toggleAllDay();
     function recompute() { return parseWall(ed.value, ad.checked ? '00:00' : et.value) - parseWall(sd.value, ad.checked ? '00:00' : st.value); }
@@ -433,26 +434,23 @@
     [sd, st].forEach(function (c) { c.addEventListener('change', shiftEnd); });
     [ed, et].forEach(function (c) { c.addEventListener('change', function () { var d = recompute(); if (d > 0 || (ad.checked && d >= 0)) state.duration = d; }); });
 
-        // ---- Répétition (masquée pour « cet événement » seul) ----
-    var rep = null;
+    // ---- Répétition (masquée pour « cet événement » seul) ----
+    var rep = null, when2 = el('div', 'af-when2'); when2.appendChild(adLabel);
     if (state.scope !== 'single') {
       rep = buildRepeat(a && a.recurrence ? a.recurrence : null, sd, state.series ? state.scope : null);
-      form.appendChild(rep.node);
+      when2.appendChild(rep.node);
     }
     if (state.series && state.scope === 'all') {
-      form.appendChild(el('p', 'muted small', 'Pour « tous les événements », seuls l\'horaire et la durée s\'appliquent aux autres occurrences ; la date de début de la série ne change pas.'));
+      when2.appendChild(el('p', 'muted small', 'Pour « tous les événements », seuls l\'horaire et la durée s\'appliquent aux autres occurrences ; la date de début de la série ne change pas.'));
     }
 
+    // ---- Colonne principale : lieu, rappel, calendrier, statut, description ----
     var cal = select(cals.map(function (c) { return [c.id, c.name]; }), a ? a.calendar_id : (opts.calendarId || lastCalendar(cals)));
-    form.appendChild(field('Calendrier', cal, 'af-cal'));
     var cat = select([[null, 'Aucune']].concat(cats.map(function (c) { return [c.id, c.name]; })), a && a.category ? a.category.id : null);
     var con = select([[null, 'Aucun']].concat(cons.map(function (c) { return [c.id, c.name + (c.company ? ' (' + c.company + ')' : '')]; })), a ? a.contact_id : (opts.contactId || null));
-    var rowC = el('div', 'row2'); rowC.append(field('Catégorie', cat, 'af-cat'), field('Contact', con, 'af-con')); form.appendChild(rowC);
     var lb = locationBlock(a), loc = lb.loc, adr = lb.adr, ltype = lb.ltype;
-    form.append(lb.row, lb.fAdr);
     var stat = select(Object.keys(STATUS).map(function (k) { return [k, STATUS[k]]; }), a ? a.status : 'scheduled');
     var prio = select(Object.keys(PRIORITY).map(function (k) { return [k, PRIORITY[k]]; }), a ? a.priority : 'normal');
-    var rowS = el('div', 'row2'); rowS.append(field('Statut', stat, 'af-stat'), field('Priorité', prio, 'af-prio')); form.appendChild(rowS);
     var color = select(COLORS, a ? a.color : '');
     var rv = a ? a.reminder_minutes : null, dm = document.querySelector('meta[name="default-reminder"]');
     if (!a && dm && dm.content !== '') rv = parseInt(dm.content, 10); // rappel proposé par défaut (réglage de l'utilisateur)
@@ -466,23 +464,43 @@
     function syncCustom() { customBox.hidden = rem.value !== 'custom'; }
     rem.addEventListener('change', syncCustom); syncCustom();
     state.remCustom = { box: customBox, n: cn, u: cu };
-    var rowR = el('div', 'row2'); var remField = field('Rappel', rem, 'af-rem', 'Notification envoyée par le serveur, même si cette page est fermée.'); remField.insertBefore(customBox, remField.querySelector('.fld-err'));
-    rowR.append(field('Couleur', color, 'af-color'), remField); form.appendChild(rowR);
-    var notes = el('textarea'); notes.rows = 2; notes.maxLength = 10000; notes.value = a && a.notes ? a.notes : '';
-    form.appendChild(field('Notes', notes, 'af-notes'));
+    var remField = field('Rappel', rem, 'af-rem', 'Notification envoyée par le serveur, même si cette page est fermée.'); remField.insertBefore(customBox, remField.querySelector('.fld-err'));
+    var desc = el('textarea'); desc.rows = 5; desc.maxLength = 10000; desc.value = a && a.description ? a.description : ''; desc.placeholder = 'Ajouter une description';
+    var notes = el('textarea'); notes.rows = 4; notes.maxLength = 10000; notes.value = a && a.notes ? a.notes : ''; notes.placeholder = 'Notes personnelles';
+    function line(icon, children) { var r = el('div', 'af-line'); r.appendChild(ico(icon)); var c = el('div', 'af-line-body'); c.append.apply(c, children); r.appendChild(c); return r; }
+    var rowCal = el('div', 'row2'); rowCal.append(field('Calendrier', cal, 'af-cal'), field('Couleur', color, 'af-color'));
+    var rowSt = el('div', 'row2'); rowSt.append(field('Statut', stat, 'af-stat'), field('Priorité', prio, 'af-prio'));
+    var main = el('div', 'af-main');
+    main.append(line('pin', [lb.row, lb.fAdr]), line('bell', [remField]), line('calendar', [rowCal]), line('flag', [rowSt]), line('text', [field('Description', desc, 'af-desc')]));
 
+    // ---- Colonne latérale : contact, catégorie, notes ----
+    var side = el('aside', 'af-side'); side.setAttribute('aria-label', 'Contact et notes');
+    side.append(el('h3', 'af-tab', 'Contact et catégorie'), field('Contact', con, 'af-con'), field('Catégorie', cat, 'af-cat'), field('Notes', notes, 'af-notes'));
+
+    // ---- Barre d'actions (en haut, à droite) ----
     var bar = el('div', 'af-actions');
-    function btn(text, cls, type, fn) { var b = el('button', 'btn ' + cls, text); b.type = type; if (fn) b.addEventListener('click', fn); bar.appendChild(b); return b; }
+    function btn(text, cls, type, fn, into) { var b = el('button', 'btn ' + cls, text); b.type = type; if (fn) b.addEventListener('click', fn); (into || bar).appendChild(b); return b; }
     btn('Enregistrer', 'btn-primary', 'submit');
-    if (!edit) btn('Enregistrer et nouveau', '', 'button', function () { save('new'); });
-    if (edit && cals.some(function (c) { return c.id === a.calendar_id && c.can.delete; }) && a.can && a.can.delete) {
-      var del = btn('Supprimer', 'btn-danger', 'button', function () {
-        deleteWithScope(Object.assign({}, a, { version: state.version })).then(function (ok) { if (ok) formDlg.close(); });
-      });
-      del.style.marginRight = 'auto';
-    }
     btn('Annuler', '', 'button', function () { formDlg.close(); });
-    form.appendChild(bar);
+    var menu = el('div', 'af-menu'), canDelete = edit && cals.some(function (c) { return c.id === a.calendar_id && c.can.delete; }) && a.can && a.can.delete;
+    if (!edit) btn('Enregistrer et nouveau', '', 'button', function () { save('new'); }, menu);
+    if (canDelete) {
+      btn('Supprimer', 'btn-danger', 'button', function () {
+        deleteWithScope(Object.assign({}, a, { version: state.version })).then(function (ok) { if (ok) formDlg.close(); });
+      }, menu);
+    }
+    if (menu.children.length) {
+      var more = el('details', 'af-more'), sm = el('summary', 'btn', 'Autres actions ▾');
+      more.append(sm, menu); bar.appendChild(more);
+      menu.addEventListener('click', function () { more.open = false; });
+    }
+
+    var close = el('button', 'icon-btn', '×'); close.type = 'button'; close.setAttribute('aria-label', 'Fermer'); close.addEventListener('click', function () { formDlg.close(); });
+    var kick = el('h2', 'af-kicker', (edit ? 'Modifier le rendez-vous' : 'Nouveau rendez-vous') + scopeLabel); kick.id = 'af-title';
+    var top = el('div', 'af-top'), tl = el('div', 'af-top-title'); tl.append(kick, fTitle); top.append(close, tl, bar);
+    var body = el('div', 'af-body'); body.append(main, side);
+    form.textContent = '';
+    form.append(top, summary, conflictBox, when, when2, body);
 
     state.rep = rep;
     state.ctl = { title: title, desc: desc, ad: ad, sd: sd, st: st, ed: ed, et: et, cal: cal, cat: cat, con: con, loc: loc, ltype: ltype, adr: adr, stat: stat, prio: prio, color: color, rem: rem, notes: notes };
