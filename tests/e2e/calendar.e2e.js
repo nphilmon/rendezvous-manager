@@ -36,6 +36,8 @@ async function login(page, user) {
   check(p.url().includes('view=month'), 'raccourci m : vue mois');
   check((await p.$$('.mg-cell')).length === 42, 'mois : 6 semaines pour novembre 2026 (commence un dimanche)');
   check((await p.textContent('.more')).includes('autre'), 'mois : lien « + X autres »');
+  const mb = await p.$$eval('.mg-bars .ev.bar', e => e.map(x => x.getBoundingClientRect().width)); const mw = await p.$eval('.mg-cell', x => x.getBoundingClientRect().width);
+  check(mb.length === 1 && mb[0] > 1.8 * mw, 'mois : journée entière sur 2 jours = une seule barre continue');
   await p.click('.more >> nth=0'); await p.waitForSelector('.tg-col');
   check(p.url().includes('view=day'), '« + X autres » ouvre la vue jour');
 

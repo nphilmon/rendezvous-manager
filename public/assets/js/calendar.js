@@ -333,34 +333,59 @@
   function renderMonth(box, vis, r) {
     var days = dayList({ s: r.s, e: r.e }), cols = settings.weekend ? 7 : 5, first = monthStart(state.date), month = new Date(first).getUTCMonth();
     var wrap = el('div', 'tg-scroll month'), grid = el('div', 'mg'); grid.style.setProperty('--cols', cols);
-    for (var i = 0; i < cols; i++) {
-      var d0 = days[i]; grid.appendChild(el('div', 'mg-dow', fmtDay(d0, { weekday: 'short' })));
+    var dows = el('div', 'mg-dows');
+    for (var i = 0; i < cols; i++) dows.appendChild(el('div', 'mg-dow', fmtDay(days[i], { weekday: 'short' })));
+    grid.appendChild(dows);
+    var t0 = today(), shown = {}, hiddenCount = 0, MAX = 3, MAXL = 3, LANE = 22;
+    for (var w = 0; w < days.length; w += cols) {
+      (function (wd) {
+        var week = el('div', 'mg-week'), lay = layoutAllDay(vis, wd), lanes = Math.min(lay.count, MAXL), extra = {};
+        // Rendez-vous « journée entière » : une barre continue par semaine ; au-delà de MAXL lignes, ils passent dans « + N autres ».
+        lay.items.forEach(function (it) {
+          shown[it.ev.key] = 1;
+          if (it.lane >= MAXL) for (var k = it.a; k <= it.b; k++) extra[k] = (extra[k] || 0) + 1;
+        });
+        wd.forEach(function (d, di) {
+          var cell = el('div', 'mg-cell' + (new Date(d).getUTCMonth() !== month ? ' other' : '') + (d === t0 ? ' today' : '')); cell.dataset.day = d;
+          var num = el('a', 'mg-num', fmtDay(d, { day: 'numeric' }) + (new Date(d).getUTCDate() === 1 ? ' ' + fmtDay(d, { month: 'short' }) : ''));
+          num.href = '/calendar?view=day&date=' + isoDate(d); num.setAttribute('aria-label', fmtDay(d, { weekday: 'long', day: 'numeric', month: 'long' }));
+          num.addEventListener('click', function (e) { if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); go('day', d); } });
+          cell.appendChild(num);
+          if (lanes) { var sp = el('div', 'mg-spacer'); sp.style.height = (lanes * LANE) + 'px'; cell.appendChild(sp); }
+          cell.addEventListener('click', function (e) { if (canCreate() && (e.target === cell || e.target.classList.contains('mg-spacer'))) openCreate(d + 9 * 3600000, d + 10 * 3600000, false); });
+          var list = vis.filter(function (ev) { return !ev.allDay && ev.s < d + DAY && (ev.e > d || (ev.s === ev.e && ev.s >= d)); })
+            .sort(function (a, b) { return a.s - b.s; });
+          list.slice(0, MAX).forEach(function (ev) {
+            shown[ev.key] = 1;
+            var b = eventButton(ev, 'line');
+            b.appendChild(el('span', 'dot')); b.appendChild(el('span', 'tm', fmtTime(ev.s)));
+            b.appendChild(el('span', 'tt', ev.raw.title)); cell.appendChild(b);
+            if (editable(ev)) makeDayDraggable(b, ev, d);
+          });
+          var over = Math.max(0, list.length - MAX) + (extra[di] || 0);
+          if (over > 0) {
+            var more = el('a', 'more', '+ ' + over + ' autre' + (over > 1 ? 's' : ''));
+            more.href = '/calendar?view=day&date=' + isoDate(d); more.addEventListener('click', function (e) { e.preventDefault(); go('day', d); });
+            list.slice(MAX).forEach(function (ev) { shown[ev.key] = 1; }); cell.appendChild(more);
+          }
+          week.appendChild(cell);
+        });
+        var bars = el('div', 'mg-bars');
+        lay.items.filter(function (it) { return it.lane < MAXL; }).forEach(function (it) {
+          var ev = it.ev;
+          var bar = eventButton(ev, 'chip bar' + (ev.s < wd[it.a] ? ' cont-l' : '') + (ev.e > wd[it.b] + DAY ? ' cont-r' : ''));
+          bar.appendChild(el('span', 't', ev.raw.title));
+          bar.style.gridColumn = (it.a + 1) + ' / ' + (it.b + 2); bar.style.gridRow = String(it.lane + 1);
+          bars.appendChild(bar);
+          if (editable(ev)) makeDayDraggable(bar, ev, function (down) {
+            var found = wd[it.a];
+            week.querySelectorAll('.mg-cell').forEach(function (c) { var rc = c.getBoundingClientRect(); if (down.clientX >= rc.left && down.clientX < rc.right) found = +c.dataset.day; });
+            return found;
+          });
+        });
+        week.appendChild(bars); grid.appendChild(week);
+      })(days.slice(w, w + cols));
     }
-    var t0 = today(), shown = {}, hiddenCount = 0, MAX = 3;
-    days.forEach(function (d) {
-      var cell = el('div', 'mg-cell' + (new Date(d).getUTCMonth() !== month ? ' other' : '') + (d === t0 ? ' today' : '')); cell.dataset.day = d;
-      var num = el('a', 'mg-num', fmtDay(d, { day: 'numeric' }) + (new Date(d).getUTCDate() === 1 ? ' ' + fmtDay(d, { month: 'short' }) : ''));
-      num.href = '/calendar?view=day&date=' + isoDate(d); num.setAttribute('aria-label', fmtDay(d, { weekday: 'long', day: 'numeric', month: 'long' }));
-      num.addEventListener('click', function (e) { if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); go('day', d); } });
-      cell.appendChild(num);
-      cell.addEventListener('click', function (e) { if (canCreate() && e.target === cell) openCreate(d + 9 * 3600000, d + 10 * 3600000, false); });
-      var list = vis.filter(function (ev) { return ev.s < d + DAY && (ev.e > d || (ev.s === ev.e && ev.s >= d)); })
-        .sort(function (a, b) { return (b.allDay - a.allDay) || (a.s - b.s); });
-      list.slice(0, MAX).forEach(function (ev) {
-        shown[ev.key] = 1;
-        var b = eventButton(ev, ev.allDay ? 'chip' : 'line');
-        if (!ev.allDay) b.appendChild(el('span', 'dot'));
-        if (!ev.allDay) b.appendChild(el('span', 'tm', fmtTime(ev.s)));
-        b.appendChild(el('span', 'tt', ev.raw.title)); cell.appendChild(b);
-        if (editable(ev)) makeDayDraggable(b, ev, d);
-      });
-      if (list.length > MAX) {
-        var more = el('a', 'more', '+ ' + (list.length - MAX) + ' autre' + (list.length - MAX > 1 ? 's' : ''));
-        more.href = '/calendar?view=day&date=' + isoDate(d); more.addEventListener('click', function (e) { e.preventDefault(); go('day', d); });
-        list.slice(MAX).forEach(function (ev) { shown[ev.key] = 1; }); cell.appendChild(more);
-      }
-      grid.appendChild(cell);
-    });
     vis.forEach(function (ev) { if (!shown[ev.key]) hiddenCount++; });
     wrap.appendChild(grid); box.appendChild(wrap); return hiddenCount;
   }
