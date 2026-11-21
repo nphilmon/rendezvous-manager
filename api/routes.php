@@ -109,6 +109,11 @@ return static function (Router $r, ?\PDO $injected = null): void {
         return new EmailApiController($guard, $pdo, new AuditLogger($pdo));
     };
     $r->add('POST', '/api/v1/email/test', static fn (Request $q) => $email()->test($q));
+    $geo = static function () use ($deps): \App\Controllers\GeoApiController {
+        [, $guard] = $deps();
+        return new \App\Controllers\GeoApiController($guard, \App\Services\Geo\AddressSearch::fromConfig());
+    };
+    $r->add('GET', '/api/v1/geo/address', static fn (Request $q) => $geo()->address($q));
     $dash = static function () use ($deps): DashboardApiController {
         [$pdo, $guard, $perms] = $deps();
         return new DashboardApiController($guard, new DashboardService($pdo, $perms, new AppointmentRepository($pdo), new StatsRepository($pdo), new NotificationRepository($pdo)));

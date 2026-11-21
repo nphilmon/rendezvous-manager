@@ -43,6 +43,7 @@ Ces points sont couverts par `CodeHygieneTest` (aucun `innerHTML`, `eval`, scrip
 
 - **Web Push** : l'adresse de l'abonnement est contrôlée (HTTPS, services connus FCM/Mozilla/Apple par défaut, adresses privées refusées) et la connexion est épinglée sur l'IP vérifiée (anti-SSRF) ; messages chiffrés (RFC 8291), jetons VAPID signés (ES256).
 - **SMTP** : TLS vérifié (STARTTLS ou implicite), **jamais de repli en clair** ; injections d'en-têtes refusées.
+- **Suggestions d'adresses** : le serveur interroge l'API Adresse (`ADDRESS_API_URL`, HTTPS vérifié, aucune redirection, délai de 4 s, hôte fixé par la configuration : pas d'URL venue du navigateur). Seul le texte saisi dans le champ *Adresse* part vers ce service public ; ni l'identité de l'utilisateur ni son adresse IP ne lui sont transmises. Désactivable avec `ADDRESS_API_ENABLED=false`.
 - **Base de données** : `DB_SSL_MODE=verify` vérifie le certificat et l'identité ; la vérification TLS n'est jamais désactivée dans le code.
 
 ## Secrets et données

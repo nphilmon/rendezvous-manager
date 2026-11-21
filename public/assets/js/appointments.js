@@ -144,7 +144,13 @@
     function row(k, v) { if (v === null || v === undefined || v === '') return; dl.appendChild(el('dt', '', k)); dl.appendChild(el('dd', '', v)); }
     row('Quand', describeTime(raw)); row('Statut', STATUS[raw.status] || raw.status); row('Priorité', PRIORITY[raw.priority] || raw.priority);
     row('Calendrier', cal ? cal.name : ''); row('Catégorie', raw.category && raw.category.name); row('Contact', raw.contact);
-    row('Lieu', raw.location); row('Adresse', raw.address);
+    var lt = raw.location_type || 'onsite';
+    if (lt !== 'onsite') row('Type de lieu', LOC_TYPES[lt]);
+    row(lt === 'video' ? 'Plateforme' : (lt === 'phone' ? 'Téléphone' : 'Lieu'), raw.location);
+    if (lt === 'video' && raw.address && /^https?:\/\//i.test(raw.address)) {
+      dl.appendChild(el('dt', '', 'Lien'));
+      var dd = el('dd'), lk = el('a', '', raw.address); lk.href = raw.address; lk.target = '_blank'; lk.rel = 'noopener noreferrer'; dd.appendChild(lk); dl.appendChild(dd);
+    } else if (lt !== 'phone') row(lt === 'other' ? 'Précisions' : 'Adresse', raw.address);
     if (raw.recurring) {
       dl.appendChild(el('dt', '', 'Répétition')); var rd = el('dd', '', 'Série récurrente'); dl.appendChild(rd);
       api('GET', '/api/v1/appointments/' + raw.id + '?occurrence=' + encodeURIComponent(raw.occurrence_start || raw.start)).then(function (r) {
@@ -161,7 +167,7 @@
   }
 
   // ---- Historique d'un rendez-vous (journal d'audit, chargé à l'ouverture de la section) ---------------------------------------
-  var FIELD = { title: 'Titre', location: 'Lieu', address: 'Adresse', status: 'Statut', priority: 'Priorité', start_utc: 'Début (UTC)', end_utc: 'Fin (UTC)', all_day: 'Journée entière', timezone: 'Fuseau',
+  var FIELD = { title: 'Titre', location: 'Lieu', location_type: 'Type de lieu', address: 'Adresse', status: 'Statut', priority: 'Priorité', start_utc: 'Début (UTC)', end_utc: 'Fin (UTC)', all_day: 'Journée entière', timezone: 'Fuseau',
     calendar_id: 'Calendrier', category_id: 'Catégorie', contact_id: 'Contact', color: 'Couleur', description: 'Description', notes: 'Notes' };
   function historySection(id) {
     var box = el('details', 'hist'), sum = el('summary', '', 'Historique'), body = el('div', 'hist-body'), loaded = false;
@@ -284,6 +290,73 @@
   }
   function input(type, attrs) { var i = el('input'); i.type = type; Object.keys(attrs || {}).forEach(function (k) { i.setAttribute(k, attrs[k]); }); return i; }
 
+  // ---- Lieu : type (sur place, visioconférence, téléphone, autre) et adresse avec suggestions de l'API Adresse ----------------------------
+  var LOC_TYPES = { onsite: 'Sur place', video: 'Visioconférence', phone: 'Téléphone', other: 'Autre' };
+  var LOC_UI = {
+    onsite: { loc: 'Lieu', locPh: 'Nom du lieu (ex. salle 3)', adr: 'Adresse', adrPh: 'Commencez à saisir une adresse…', showAdr: true },
+    video: { loc: 'Plateforme', locPh: 'Zoom, Teams, Google Meet…', adr: 'Lien de la visioconférence', adrPh: 'https://…', showAdr: true },
+    phone: { loc: 'Numéro ou contact', locPh: '06 12 34 56 78', adr: 'Adresse', adrPh: '', showAdr: false },
+    other: { loc: 'Lieu', locPh: '', adr: 'Précisions', adrPh: '', showAdr: true }
+  };
+  var addressOff = false; // le serveur indique que la recherche d'adresses n'est pas activée : plus aucun appel
+
+  function locationBlock(a) {
+    var ltype = select(Object.keys(LOC_TYPES).map(function (k) { return [k, LOC_TYPES[k]]; }), a && a.location_type ? a.location_type : 'onsite');
+    var loc = input('text', { maxlength: 190 }); loc.value = a && a.location ? a.location : '';
+    var adr = input('text', { maxlength: 255, autocomplete: 'off', spellcheck: 'false' }); adr.value = a && a.address ? a.address : '';
+    var fType = field('Type de lieu', ltype, 'af-ltype'), fLoc = field('Lieu', loc, 'af-loc'), fAdr = field('Adresse', adr, 'af-adr');
+    var row = el('div', 'row2'); row.append(fType, fLoc);
+    var list = el('ul', 'sugg'); list.id = 'af-adr-list'; list.setAttribute('role', 'listbox'); list.setAttribute('aria-label', 'Adresses proposées'); list.hidden = true;
+    adr.after(list);
+    adr.setAttribute('role', 'combobox'); adr.setAttribute('aria-autocomplete', 'list'); adr.setAttribute('aria-expanded', 'false'); adr.setAttribute('aria-controls', 'af-adr-list');
+    var live = el('p', 'sr-only'); live.setAttribute('role', 'status'); fAdr.appendChild(live);
+
+    var items = [], active = -1, timer = null, seq = 0;
+    function close() { list.hidden = true; list.textContent = ''; items = []; active = -1; adr.setAttribute('aria-expanded', 'false'); adr.removeAttribute('aria-activedescendant'); }
+    function mark(i) {
+      active = i; items.forEach(function (li, k) { li.setAttribute('aria-selected', k === i ? 'true' : 'false'); li.classList.toggle('on', k === i); });
+      if (i >= 0) adr.setAttribute('aria-activedescendant', items[i].id); else adr.removeAttribute('aria-activedescendant');
+    }
+    function choose(i) { if (i < 0 || i >= items.length) return; adr.value = items[i]._label; close(); adr.focus(); }
+    function show(rows) {
+      close(); if (!rows.length) { live.textContent = 'Aucune adresse proposée.'; return; }
+      rows.forEach(function (r, i) {
+        var li = el('li', '', r.label); li.id = 'af-adr-o' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false'); li._label = r.label;
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); choose(i); }); list.appendChild(li); items.push(li);
+      });
+      list.hidden = false; list.scrollIntoView({ block: 'nearest' }); adr.setAttribute('aria-expanded', 'true'); live.textContent = rows.length + ' adresse' + (rows.length > 1 ? 's' : '') + ' proposée' + (rows.length > 1 ? 's' : '') + '.';
+    }
+    function lookup() {
+      var q = adr.value.trim(), my = ++seq;
+      if (ltype.value !== 'onsite' || addressOff || q.length < 3) { close(); return; }
+      api('GET', '/api/v1/geo/address?q=' + encodeURIComponent(q)).then(function (r) {
+        if (my !== seq || ltype.value !== 'onsite') return;
+        if (r.ok && r.data && r.data.meta && r.data.meta.enabled === false) { addressOff = true; close(); return; }
+        if (!r.ok) { close(); return; } // service indisponible : la saisie libre reste possible
+        show(r.data.data || []);
+      });
+    }
+    adr.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(lookup, 300); });
+    adr.addEventListener('blur', function () { clearTimeout(timer); seq++; setTimeout(close, 120); });
+    adr.addEventListener('keydown', function (e) {
+      if (list.hidden || !items.length) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); mark((active + 1) % items.length); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); mark(active <= 0 ? items.length - 1 : active - 1); }
+      else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); choose(active); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+    });
+
+    function apply() {
+      var u = LOC_UI[ltype.value] || LOC_UI.onsite;
+      fLoc.querySelector('label').textContent = u.loc; loc.placeholder = u.locPh;
+      fAdr.querySelector('label').textContent = u.adr; adr.placeholder = u.adrPh; fAdr.hidden = !u.showAdr;
+      adr.setAttribute('inputmode', ltype.value === 'video' ? 'url' : 'text');
+      if (ltype.value === 'onsite') adr.setAttribute('role', 'combobox'); else { adr.removeAttribute('role'); close(); }
+    }
+    ltype.addEventListener('change', apply); apply();
+    return { row: row, fAdr: fAdr, loc: loc, adr: adr, ltype: ltype };
+  }
+
   function buildForm() {
     formDlg = el('dialog', 'form-dialog'); formDlg.setAttribute('aria-labelledby', 'af-title');
     form = el('form', 'af'); form.noValidate = true;
@@ -375,9 +448,8 @@
     var cat = select([[null, 'Aucune']].concat(cats.map(function (c) { return [c.id, c.name]; })), a && a.category ? a.category.id : null);
     var con = select([[null, 'Aucun']].concat(cons.map(function (c) { return [c.id, c.name + (c.company ? ' (' + c.company + ')' : '')]; })), a ? a.contact_id : (opts.contactId || null));
     var rowC = el('div', 'row2'); rowC.append(field('Catégorie', cat, 'af-cat'), field('Contact', con, 'af-con')); form.appendChild(rowC);
-    var loc = input('text', { maxlength: 190 }); loc.value = a && a.location ? a.location : '';
-    var adr = input('text', { maxlength: 255 }); adr.value = a && a.address ? a.address : '';
-    var rowL = el('div', 'row2'); rowL.append(field('Lieu', loc, 'af-loc'), field('Adresse', adr, 'af-adr')); form.appendChild(rowL);
+    var lb = locationBlock(a), loc = lb.loc, adr = lb.adr, ltype = lb.ltype;
+    form.append(lb.row, lb.fAdr);
     var stat = select(Object.keys(STATUS).map(function (k) { return [k, STATUS[k]]; }), a ? a.status : 'scheduled');
     var prio = select(Object.keys(PRIORITY).map(function (k) { return [k, PRIORITY[k]]; }), a ? a.priority : 'normal');
     var rowS = el('div', 'row2'); rowS.append(field('Statut', stat, 'af-stat'), field('Priorité', prio, 'af-prio')); form.appendChild(rowS);
@@ -413,8 +485,8 @@
     form.appendChild(bar);
 
     state.rep = rep;
-    state.ctl = { title: title, desc: desc, ad: ad, sd: sd, st: st, ed: ed, et: et, cal: cal, cat: cat, con: con, loc: loc, adr: adr, stat: stat, prio: prio, color: color, rem: rem, notes: notes };
-    state.fields = { recurrence: rep ? rep.focusEl : null, title: title, description: desc, start: sd, end: ed, calendar_id: cal, category_id: cat, contact_id: con, location: loc, address: adr,
+    state.ctl = { title: title, desc: desc, ad: ad, sd: sd, st: st, ed: ed, et: et, cal: cal, cat: cat, con: con, loc: loc, ltype: ltype, adr: adr, stat: stat, prio: prio, color: color, rem: rem, notes: notes };
+    state.fields = { recurrence: rep ? rep.focusEl : null, title: title, description: desc, start: sd, end: ed, calendar_id: cal, category_id: cat, contact_id: con, location: loc, location_type: ltype, address: adr,
       status: stat, priority: prio, color: color, reminder_minutes: rem, notes: notes };
     state.edit = edit;
     if (formDlg.showModal && !formDlg.open) formDlg.showModal(); else formDlg.setAttribute('open', '');
@@ -565,10 +637,11 @@
     if (s === null) errs.start = ['Date de début requise.'];
     if (e === null) errs.end = ['Date de fin requise.'];
     if (s !== null && e !== null && (allDay ? e < s : e <= s)) errs.end = [allDay ? 'La fin ne peut pas précéder le début.' : 'La fin doit être postérieure au début.'];
+    if (c.ltype.value === 'video' && c.adr.value.trim() && !/^https?:\/\/\S+$/i.test(c.adr.value.trim())) errs.address = ['Le lien doit commencer par http:// ou https://.'];
     if (Object.keys(errs).length) { showFieldErrors(errs); return null; }
     var body = {
       calendar_id: +c.cal.value, title: c.title.value.trim(), description: c.desc.value.trim() || null, notes: c.notes.value.trim() || null,
-      all_day: allDay, timezone: TZ, location: c.loc.value.trim() || null, address: c.adr.value.trim() || null,
+      all_day: allDay, timezone: TZ, location: c.loc.value.trim() || null, location_type: c.ltype.value, address: c.ltype.value === 'phone' ? null : (c.adr.value.trim() || null),
       category_id: c.cat.value ? +c.cat.value : null, contact_id: c.con.value ? +c.con.value : null,
       status: c.stat.value, priority: c.prio.value, color: c.color.value || null, reminder_minutes: reminderValue(c)
     };

@@ -70,6 +70,7 @@ L'assistant écrit les paramètres de la base ; le reste se règle à la main da
 | `HSTS_MAX_AGE` | durée de l'en-tête HSTS en secondes (0 = non envoyé) ; à activer une fois HTTPS définitif | `0` |
 | `SYNC_INTERVAL` | intervalle de synchronisation des navigateurs (secondes, 2 à 300) | `30` |
 | `MAIL_ENABLED`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_ENCRYPTION`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_CA_FILE` | e-mail SMTP facultatif (TLS vérifié, jamais de repli en clair) | désactivé |
+| `ADDRESS_API_ENABLED`, `ADDRESS_API_URL` | suggestions d'adresses du formulaire de rendez-vous (API Adresse, service public français ; appels faits par le serveur, HTTPS vérifié) | activé, `https://api-adresse.data.gouv.fr/search/` |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push (clés générées par `php scripts/generate_vapid.php`) | vides |
 | `PUSH_ALLOW_ANY` | autorise d'autres services push que FCM/Mozilla/Apple (déconseillé) | `false` |
 | `BACKUP_DIR`, `BACKUP_KEEP` | dossier et nombre de sauvegardes conservées | `storage/backups`, `14` |

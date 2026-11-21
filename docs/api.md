@@ -92,6 +92,7 @@ Statuts : `scheduled`, `confirmed`, `tentative`, `completed`, `cancelled`. Prior
 | `DELETE /api/v1/reminders/{id}` | `appointments.read` | retire votre rappel sur le rendez-vous d'identifiant `{id}` |
 | `GET /api/v1/search` | `appointments.read` | recherche globale `?q=` (2 à 100 caractères) : 8 rendez-vous et 8 contacts au plus, avec le total de chacun ; uniquement les calendriers lisibles et vos contacts |
 | `GET /api/v1/search/facets` | `appointments.read` | créateurs des rendez-vous visibles (filtre « créé par ») |
+| `GET /api/v1/geo/address` | `appointments.write` | `?q=` (3 à 200 caractères) : jusqu'à 5 suggestions d'adresses `{label, name, postcode, city}` obtenues par le serveur auprès de l'API Adresse ; `meta.enabled=false` si la fonction est désactivée ; 503 si le service est injoignable ; 429 au-delà de 60 appels par minute et par compte |
 | `GET /api/v1/reports` | `reports.view` | rapports d'activité : `from`, `to` (AAAA-MM-JJ, au plus 366 jours, fuseau de l'utilisateur), `format=json\|csv` ; totaux, taux, heures, répartitions par statut, priorité, catégorie, calendrier, créateur, jour, heure, mois, principaux contacts ; calendriers autorisés seulement |
 | `GET /api/v1/dashboard` | `appointments.read` | compteurs, prochain rendez-vous, répartitions ; `period` = `week` \| `month` \| `30d` \| `year` |
 | `GET /api/v1/sync/changes` | `appointments.read` | `?cursor=N` : nature des changements visibles (type, identifiant, action) — jamais de contenu ; `reset: true` si le curseur est inconnu |

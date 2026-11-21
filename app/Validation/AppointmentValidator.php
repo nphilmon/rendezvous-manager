@@ -11,6 +11,8 @@ use DateTimeZone;
 final class AppointmentValidator
 {
     public const STATUSES = ['scheduled', 'confirmed', 'tentative', 'cancelled', 'completed'];
+    /** Type de lieu : sur place (adresse), visioconférence (lien), téléphone, autre. */
+    public const LOCATION_TYPES = ['onsite', 'video', 'phone', 'other'];
     public const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
     public const MAX_REMINDER_MINUTES = 40320; // 4 semaines
 
@@ -54,6 +56,14 @@ final class AppointmentValidator
         $description = $str('description', 10000);
         $location = $str('location', 190);
         $address = $str('address', 255);
+        $locationType = $in['location_type'] ?? 'onsite';
+        if (!is_string($locationType) || !in_array($locationType, self::LOCATION_TYPES, true)) {
+            $err('location_type', 'Type de lieu invalide.');
+            $locationType = 'onsite';
+        }
+        if ($locationType === 'video' && $address !== null && !self::isWebUrl($address)) {
+            $err('address', 'Le lien de visioconférence doit être une adresse http:// ou https:// valide.');
+        }
         $notes = $str('notes', 10000);
 
         $calendarId = self::positiveInt($in['calendar_id'] ?? null);
@@ -118,7 +128,7 @@ final class AppointmentValidator
         }
         return [
             'calendar_id' => $calendarId, 'category_id' => $categoryId, 'contact_id' => $contactId,
-            'title' => $title, 'description' => $description, 'location' => $location, 'address' => $address, 'notes' => $notes,
+            'title' => $title, 'description' => $description, 'location' => $location, 'location_type' => $locationType, 'address' => $address, 'notes' => $notes,
             'start_utc' => $start, 'end_utc' => $end, 'all_day' => $allDay ? 1 : 0, 'timezone' => $tz,
             'status' => $status, 'priority' => $priority, 'color' => $color === null ? null : strtolower($color),
             'reminder_minutes' => $reminder,
@@ -169,5 +179,16 @@ final class AppointmentValidator
             return $v;
         }
         return is_string($v) && ctype_digit($v) && (int) $v > 0 ? (int) $v : null;
+    }
+
+    /** Lien web autorisé : http(s) avec un nom d'hôte, sans identifiants intégrés ni caractères d'espacement. */
+    public static function isWebUrl(string $u): bool
+    {
+        if (preg_match('/\s/', $u) === 1) {
+            return false;
+        }
+        $p = parse_url($u);
+        return is_array($p) && in_array(strtolower((string) ($p['scheme'] ?? '')), ['http', 'https'], true)
+            && ($p['host'] ?? '') !== '' && !isset($p['user']) && !isset($p['pass']);
     }
 }

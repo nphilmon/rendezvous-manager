@@ -388,3 +388,7 @@ JOIN roles r ON r.id = u.role_id
 WHERE r.code <> 'readonly'
   AND NOT EXISTS (SELECT 1 FROM calendars c WHERE c.owner_id = u.id AND c.deleted_at IS NULL);
 
+-- 0009_location_type.sql
+-- Type de lieu d'un rendez-vous : sur place, visioconférence, téléphone ou autre
+ALTER TABLE appointments ADD COLUMN location_type VARCHAR(10) NOT NULL DEFAULT 'onsite' AFTER location;
+

@@ -123,6 +123,31 @@ const check = (ok, msg) => { console.log((ok ? '  ok    ' : '  FAIL  ') + msg); 
   await p.fill('#af-title-in', 'Férié'); await p.click('.af-actions >> text=Enregistrer >> nth=0');
   await p.waitForSelector('.tg-allday .ev.bar:has-text("Férié")'); check(true, 'journée entière créée (date de fin inclusive côté formulaire)');
 
+  // 9b. lieu : type, suggestions d'adresses (service simulé : aucun accès réseau), lien de visioconférence
+  await p.route('**/api/v1/geo/address*', r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [
+    { label: '8 Boulevard du Port 80000 Amiens', name: '8 Boulevard du Port', postcode: '80000', city: 'Amiens' },
+    { label: '8 Rue du Port 76000 Rouen', name: '8 Rue du Port', postcode: '76000', city: 'Rouen' }], meta: { enabled: true } }) }));
+  p.on('dialog', d => d.accept());
+  await p.keyboard.press('c'); await p.waitForSelector('.form-dialog[open]');
+  check((await p.textContent('label[for=af-loc]')) === 'Lieu' && (await p.textContent('label[for=af-adr]')) === 'Adresse', 'lieu : étiquettes « Sur place » par défaut');
+  await p.fill('#af-title-in', 'Rendez-vous Port');
+  await p.fill('#af-sd', '2027-02-10'); await p.fill('#af-ed', '2027-02-10');
+  await p.fill('#af-adr', '8 bd du port'); await p.waitForSelector('#af-adr-list li');
+  check(await p.locator('#af-adr-list li').count() === 2 && (await p.getAttribute('#af-adr', 'aria-expanded')) === 'true', 'adresse : deux suggestions affichées (combobox)');
+  await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter');
+  check((await p.inputValue('#af-adr')) === '8 Boulevard du Port 80000 Amiens' && await p.locator('.form-dialog[open]').count() === 1, 'adresse : flèche + Entrée choisit la suggestion sans envoyer le formulaire');
+  await p.fill('#af-adr', '8 bd du port'); await p.waitForSelector('#af-adr-list li'); await p.keyboard.press('Escape');
+  check(await p.locator('#af-adr-list li').count() === 0 && await p.locator('.form-dialog[open]').count() === 1, 'Échap ferme la liste sans fermer la fenêtre');
+  await p.selectOption('#af-ltype', 'video');
+  check((await p.textContent('label[for=af-loc]')) === 'Plateforme' && (await p.textContent('label[for=af-adr]')) === 'Lien de la visioconférence', 'visioconférence : étiquettes Plateforme / Lien');
+  await p.fill('#af-loc', 'Zoom'); await p.fill('#af-adr', 'pas un lien'); await p.click('.af-actions >> text=Enregistrer >> nth=0');
+  await p.waitForSelector('#af-adr-err:not([hidden])'); check(true, 'lien invalide refusé avant envoi');
+  await p.fill('#af-adr', 'https://zoom.example/j/123'); await p.click('.af-actions >> text=Enregistrer >> nth=0');
+  await p.waitForSelector('.form-dialog[open]', { state: 'detached' }).catch(() => {}); await p.waitForFunction(() => !document.querySelector('.form-dialog[open]'));
+  const saved = await p.evaluate(async () => { const j = await (await fetch('/api/v1/appointments?q=Rendez-vous%20Port')).json(); return (j.data || []).map(a => [a.location_type, a.location, a.address]); });
+  check(JSON.stringify(saved) === JSON.stringify([['video', 'Zoom', 'https://zoom.example/j/123']]), 'visioconférence enregistrée : type, plateforme et lien ' + JSON.stringify(saved));
+  await p.unroute('**/api/v1/geo/address*');
+
   // 10. lecture seule : aucune création
   const m = await b.newContext({ viewport: { width: 1280, height: 800 } }); const mp = await m.newPage();
   await mp.goto(BASE + '/login'); await mp.fill('#identifier', 'bob'); await mp.fill('#password', 'Correct-Horse-9'); await mp.click('#login-submit'); await mp.waitForURL(BASE + '/');

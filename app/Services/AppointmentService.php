@@ -17,7 +17,7 @@ use PDO;
 final class AppointmentService
 {
     private const EDITABLE = ['calendar_id', 'category_id', 'contact_id', 'title', 'description', 'notes', 'start', 'end', 'all_day',
-        'timezone', 'location', 'address', 'status', 'priority', 'color', 'reminder_minutes'];
+        'timezone', 'location', 'location_type', 'address', 'status', 'priority', 'color', 'reminder_minutes'];
     // « scope », « occurrence » et « recurrence » sont lus séparément (voir updateSeries)
 
     private PDO $pdo;
@@ -523,7 +523,7 @@ final class AppointmentService
         return [
             'calendar_id' => $api['calendar_id'], 'category_id' => $api['category']['id'] ?? null, 'contact_id' => $api['contact_id'],
             'title' => $api['title'], 'description' => $api['description'], 'notes' => $api['notes'], 'start' => $api['start'], 'end' => $api['end'],
-            'all_day' => $api['all_day'], 'timezone' => $api['timezone'], 'location' => $api['location'], 'address' => $api['address'],
+            'all_day' => $api['all_day'], 'timezone' => $api['timezone'], 'location' => $api['location'], 'location_type' => $api['location_type'], 'address' => $api['address'],
             'status' => $api['status'], 'priority' => $api['priority'], 'color' => $api['color'],
             'reminder_minutes' => $this->repo->reminderFor((int) $row['id'], $u->id),
         ];
@@ -550,7 +550,7 @@ final class AppointmentService
         $norm = static fn (mixed $v): string => is_bool($v) ? (string) (int) $v : (string) ($v ?? '');
         $cut = static fn (string $v): string => mb_strlen($v) > 120 ? mb_substr($v, 0, 120) . '…' : $v;
         $out = [];
-        foreach (['title', 'location', 'address', 'status', 'priority', 'start_utc', 'end_utc', 'all_day', 'timezone', 'calendar_id', 'category_id', 'contact_id', 'color'] as $k) {
+        foreach (['title', 'location', 'location_type', 'address', 'status', 'priority', 'start_utc', 'end_utc', 'all_day', 'timezone', 'calendar_id', 'category_id', 'contact_id', 'color'] as $k) {
             if ($norm($old[$k] ?? null) !== $norm($new[$k] ?? null)) {
                 $out[$k] = [$cut($norm($old[$k] ?? null)), $cut($norm($new[$k] ?? null))];
             }

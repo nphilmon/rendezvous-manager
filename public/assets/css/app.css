@@ -236,3 +236,9 @@ fieldset.chan{border:1px solid var(--line);border-radius:10px;margin:12px 0 0;pa
 .nowrap{white-space:nowrap}
 .hist{margin:12px 0}.hist summary{cursor:pointer;color:var(--muted)}.hist-list{list-style:none;margin:8px 0 0;padding:0;max-height:240px;overflow:auto}.hist-list li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.88rem}
 .bad{color:var(--bad)}
+
+/* Suggestions d'adresses (liste sous le champ, dans le flux : jamais masquée par le défilement de la fenêtre) */
+.sugg{scroll-margin-bottom:4.5rem;list-style:none;margin:2px 0 0;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--surface);max-height:12rem;overflow:auto}
+.sugg li{padding:6px 8px;border-radius:6px;cursor:pointer;font-size:.88rem}
+.sugg li:hover,.sugg li.on{background:var(--brand-soft)}
+.sugg[hidden],.fld[hidden]{display:none}

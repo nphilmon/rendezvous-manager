@@ -22,7 +22,7 @@ Compteurs réels de vos calendriers : total, aujourd'hui, semaine, mois, à veni
 
 ## Rendez-vous
 
-Champs : titre, début et fin (ou « journée entière »), fuseau horaire, calendrier, catégorie, contact, lieu, adresse, description, notes, statut (planifié, confirmé, provisoire, terminé, annulé), priorité, couleur, **rappel**.
+Champs : titre, début et fin (ou « journée entière »), fuseau horaire, calendrier, catégorie, contact, **type de lieu** et lieu, adresse, description, notes, statut (planifié, confirmé, provisoire, terminé, annulé), priorité, couleur, **rappel**.
 
 **Récurrence** : tous les jours/semaines/mois/ans, intervalle, jours de la semaine, jour du mois, fin (jamais, après N occurrences, à une date). Pour une série, on choisit de modifier **cette occurrence**, **celle-ci et les suivantes**, ou **toute la série** ; on peut annuler une seule occurrence.
 
@@ -94,3 +94,14 @@ L'application peut s'installer comme un programme, **uniquement en HTTPS** :
 - **iPhone / iPad (Safari)** : bouton Partager → « Sur l'écran d'accueil ». Les notifications Web Push n'y fonctionnent qu'après cet ajout (iOS 16.4 ou plus récent).
 
 L'application installée reste un simple raccourci vers le site : aucune donnée n'est mise en cache hors ligne, il faut une connexion pour l'utiliser. Les notifications Web Push restent soumises à la permission accordée dans le navigateur.
+
+### Lieu d'un rendez-vous
+
+Le champ **Type de lieu** adapte le formulaire :
+
+- **Sur place** : *Lieu* (nom, ex. salle 3) et *Adresse*. En saisissant au moins 3 caractères dans *Adresse*, des adresses sont proposées (API Adresse, adresses en France) : flèches ↑↓ puis Entrée, ou clic ; Échap ferme la liste. La saisie libre reste toujours possible, y compris si le service est indisponible.
+- **Visioconférence** : *Plateforme* (Zoom, Teams, Meet…) et *Lien* (obligatoirement `http://` ou `https://`). Le lien est cliquable dans le détail du rendez-vous.
+- **Téléphone** : numéro ou contact dans *Numéro ou contact*.
+- **Autre** : *Lieu* et *Précisions* en texte libre.
+
+Seul le texte saisi dans *Adresse* (type « Sur place ») est transmis, par le serveur, à l'API Adresse ; un administrateur peut désactiver la fonction (`ADDRESS_API_ENABLED=false`).

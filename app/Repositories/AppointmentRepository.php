@@ -14,7 +14,7 @@ final class AppointmentRepository
     public const MAX_ROWS = 2000;
 
     private const COLS = "a.id, a.uid, a.calendar_id, a.title, a.description, a.notes, a.all_day, a.timezone,
-                       a.location, a.address, a.status, a.priority, a.color, a.version, a.created_by, a.deleted_at, a.completed_at,
+                       a.location, a.location_type, a.address, a.status, a.priority, a.color, a.version, a.created_by, a.deleted_at, a.completed_at,
                        a.created_at, a.updated_at,
                        cat.id AS category_id, cat.name AS category_name, cat.color AS category_color, a.contact_id,
                        NULLIF(TRIM(CONCAT(IFNULL(ct.first_name, ''), ' ', ct.last_name)), '') AS contact_name,
@@ -250,11 +250,11 @@ final class AppointmentRepository
     {
         $this->pdo->prepare(
             'INSERT INTO appointments (uid, calendar_id, category_id, contact_id, created_by, title, description, start_utc, end_utc, all_day,
-                timezone, location, address, status, priority, color, notes, completed_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                timezone, location, location_type, address, status, priority, color, notes, completed_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         )->execute([
             self::uuid(), $d['calendar_id'], $d['category_id'], $d['contact_id'], $userId, $d['title'], $d['description'],
-            $d['start_utc'], $d['end_utc'], $d['all_day'], $d['timezone'], $d['location'], $d['address'], $d['status'],
+            $d['start_utc'], $d['end_utc'], $d['all_day'], $d['timezone'], $d['location'], $d['location_type'], $d['address'], $d['status'],
             $d['priority'], $d['color'], $d['notes'], $d['status'] === 'completed' ? gmdate('Y-m-d H:i:s') : null,
             gmdate('Y-m-d H:i:s'), gmdate('Y-m-d H:i:s'),
         ]);
@@ -266,14 +266,14 @@ final class AppointmentRepository
     {
         $st = $this->pdo->prepare(
             'UPDATE appointments SET calendar_id = ?, category_id = ?, contact_id = ?, title = ?, description = ?, start_utc = ?, end_utc = ?,
-                all_day = ?, timezone = ?, location = ?, address = ?, status = ?, priority = ?, color = ?, notes = ?,
+                all_day = ?, timezone = ?, location = ?, location_type = ?, address = ?, status = ?, priority = ?, color = ?, notes = ?,
                 completed_at = CASE WHEN ? = \'completed\' THEN COALESCE(completed_at, ?) ELSE NULL END,
                 version = version + 1, updated_at = ?
              WHERE id = ? AND version = ? AND deleted_at IS NULL'
         );
         $now = gmdate('Y-m-d H:i:s');
         $st->execute([$d['calendar_id'], $d['category_id'], $d['contact_id'], $d['title'], $d['description'], $d['start_utc'], $d['end_utc'],
-            $d['all_day'], $d['timezone'], $d['location'], $d['address'], $d['status'], $d['priority'], $d['color'], $d['notes'],
+            $d['all_day'], $d['timezone'], $d['location'], $d['location_type'], $d['address'], $d['status'], $d['priority'], $d['color'], $d['notes'],
             $d['status'], $now, $now, $id, $expectedVersion]);
         return $st->rowCount() === 1;
     }
@@ -405,7 +405,7 @@ final class AppointmentRepository
         $out = [
             'id' => (int) $r['id'], 'uid' => $r['uid'], 'calendar_id' => (int) $r['calendar_id'], 'title' => $r['title'],
             'description' => $r['description'], 'start' => $iso($r['start_utc']), 'end' => $iso($r['end_utc']),
-            'all_day' => (bool) $r['all_day'], 'timezone' => $r['timezone'], 'location' => $r['location'], 'address' => $r['address'],
+            'all_day' => (bool) $r['all_day'], 'timezone' => $r['timezone'], 'location' => $r['location'], 'location_type' => $r['location_type'], 'address' => $r['address'],
             'status' => $r['status'], 'priority' => $r['priority'], 'color' => $r['color'], 'version' => (int) $r['version'],
             'category' => $r['category_id'] === null ? null : ['id' => (int) $r['category_id'], 'name' => $r['category_name'], 'color' => $r['category_color']],
             'contact_id' => $r['contact_id'] === null ? null : (int) $r['contact_id'],
