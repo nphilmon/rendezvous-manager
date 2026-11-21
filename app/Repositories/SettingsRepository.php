@@ -30,6 +30,7 @@ final class SettingsRepository
         'hour12' => false,
         'default_duration' => 60,   // minutes, pour un nouveau rendez-vous
         'default_calendar' => null, // calendrier proposé par défaut (par utilisateur seulement)
+        'hidden_calendars' => [],   // calendriers masqués dans la vue (par utilisateur seulement)
     ];
     /** Réglages de l'organisation (administrateur). */
     public const GLOBAL_DEFAULTS = ['org_name' => '', 'default_timezone' => 'Europe/Paris'];
@@ -63,7 +64,7 @@ final class SettingsRepository
     public function ui(int $userId): array
     {
         $org = array_intersect_key($this->stored(0, 'ui'), self::UI_DEFAULTS);
-        unset($org['default_calendar']);
+        unset($org['default_calendar'], $org['hidden_calendars']);
         return array_replace(self::UI_DEFAULTS, $org, array_intersect_key($this->stored($userId, 'ui'), self::UI_DEFAULTS));
     }
 
@@ -89,7 +90,7 @@ final class SettingsRepository
     public function orgUi(): array
     {
         $o = array_replace(self::UI_DEFAULTS, array_intersect_key($this->stored(0, 'ui'), self::UI_DEFAULTS));
-        unset($o['default_calendar']);
+        unset($o['default_calendar'], $o['hidden_calendars']);
         return $o;
     }
 

@@ -71,10 +71,10 @@ final class SettingsUiTest extends DatabaseTestCase
         $this->assertSame(SettingsRepository::UI_DEFAULTS, $g['ui']);
         $this->assertSame(false, $g['meta']['ui_stored']);
         $this->assertSame(['first_name' => 'Alice', 'last_name' => 'T', 'timezone' => 'Europe/Paris', 'email' => 'alice@example.org', 'username' => 'alice'], $g['profile']);
-        $r = $this->call('alice', 'PUT', '/api/v1/settings', ['ui' => ['theme' => 'dark', 'view' => 'month', 'week_start' => 0, 'start_hour' => 8, 'end_hour' => 19, 'step' => 15, 'weekend' => false, 'hour12' => true, 'default_duration' => 45, 'default_calendar' => 1]]);
+        $r = $this->call('alice', 'PUT', '/api/v1/settings', ['ui' => ['theme' => 'dark', 'view' => 'month', 'week_start' => 0, 'start_hour' => 8, 'end_hour' => 19, 'step' => 15, 'weekend' => false, 'hour12' => true, 'default_duration' => 45, 'default_calendar' => 1, 'hidden_calendars' => [2, 1, 2]]]);
         $this->assertSame(200, $r->status, $r->body);
         $ui = $this->j($r)['ui'];
-        $this->assertSame(['dark', 'month', 0, 8, 19, 15, false, true, 45, 1], array_values($ui));
+        $this->assertSame(['dark', 'month', 0, 8, 19, 15, false, true, 45, 1, [2, 1]], array_values($ui), 'doublons retirés dans la liste des calendriers masqués');
         $this->assertSame(true, $this->j($r)['meta']['ui_stored']);
         $this->assertSame($ui, $this->j($this->call('alice', 'GET', '/api/v1/settings'))['ui'], 'relu depuis la base');
         $this->assertSame(SettingsRepository::UI_DEFAULTS, $this->j($this->call('bob', 'GET', '/api/v1/settings'))['ui'], 'propres à chaque utilisateur');
@@ -86,7 +86,7 @@ final class SettingsUiTest extends DatabaseTestCase
     {
         $bad = [['theme' => 'rose'], ['view' => 'year'], ['week_start' => 2], ['week_start' => '1'], ['start_hour' => -1], ['start_hour' => 24], ['end_hour' => 0], ['end_hour' => 25], ['step' => 7], ['step' => '30'],
             ['weekend' => 'oui'], ['hour12' => 1], ['default_duration' => 4], ['default_duration' => 721], ['default_duration' => 'x'], ['colour' => 'red'],
-            ['start_hour' => 10, 'end_hour' => 10], ['default_calendar' => 2], ['default_calendar' => 999], ['default_calendar' => 'a']];
+            ['start_hour' => 10, 'end_hour' => 10], ['hidden_calendars' => 'x'], ['hidden_calendars' => [0]], ['hidden_calendars' => [1.5]], ['hidden_calendars' => ['1']], ['hidden_calendars' => ['a' => 1]], ['hidden_calendars' => range(1, 201)], ['default_calendar' => 2], ['default_calendar' => 999], ['default_calendar' => 'a']];
         foreach ($bad as $b) {
             $r = $this->call('alice', 'PUT', '/api/v1/settings', ['ui' => $b]);
             $this->assertSame(422, $r->status, json_encode($b) . ' ' . $r->body);
@@ -145,7 +145,7 @@ final class SettingsUiTest extends DatabaseTestCase
         $alice = $this->j($this->call('alice', 'GET', '/api/v1/settings'))['ui'];
         $this->assertSame(['week', 7], [$alice['view'], $alice['start_hour']], 'choix personnel prioritaire, le reste hérité');
         // validation
-        foreach ([['global' => ['org_name' => str_repeat('x', 81)]], ['global' => ['default_timezone' => 'Nope/Zone']], ['global' => ['secret' => 1]], ['ui' => ['default_calendar' => 1]], ['ui' => ['view' => 'x']], [], ['other' => 1]] as $bad) {
+        foreach ([['global' => ['org_name' => str_repeat('x', 81)]], ['global' => ['default_timezone' => 'Nope/Zone']], ['global' => ['secret' => 1]], ['ui' => ['default_calendar' => 1]], ['ui' => ['hidden_calendars' => [1]]], ['ui' => ['view' => 'x']], [], ['other' => 1]] as $bad) {
             $this->assertSame(422, $this->call('admin', 'PUT', '/api/v1/settings/global', $bad)->status, json_encode($bad));
         }
         // le fuseau par défaut sert aux nouveaux comptes sans fuseau précisé

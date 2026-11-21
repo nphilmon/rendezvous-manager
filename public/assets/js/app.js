@@ -43,10 +43,11 @@
       Object.keys(map).forEach(function (k) { if (ls[k] !== undefined) legacy[map[k]] = ls[k]; });
     }
     try { var lt = localStorage.getItem('rvm_theme'); if (lt === 'light' || lt === 'dark') legacy.theme = lt; } catch (e) {}
+    try { var lh = JSON.parse(localStorage.getItem('rvm_cal_hidden')); if (Array.isArray(lh) && lh.length) legacy.hidden_calendars = lh.filter(function (x) { return Number.isInteger(x) && x > 0; }).slice(0, 200); } catch (e) {}
     if (Object.keys(legacy).length) {
       Object.assign(ui, legacy);
       window.RVM.saveUi(legacy).then(function (r) {
-        if (r.ok) { try { localStorage.removeItem('rvm_cal_settings'); } catch (e) {} }
+        if (r.ok) { try { localStorage.removeItem('rvm_cal_settings'); localStorage.removeItem('rvm_cal_hidden'); } catch (e) {} }
         else Object.keys(legacy).forEach(function () { /* conservé dans le navigateur : nouvel essai à la prochaine page */ });
       });
     } else ui.stored = true;

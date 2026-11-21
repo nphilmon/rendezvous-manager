@@ -75,6 +75,26 @@ final class CodeHygieneTest extends TestCase
         $bad = $this->grep($this->files(['public/assets/js', 'public/service-worker.js'], 'js'),
             '/\.(innerHTML|outerHTML)\b|insertAdjacentHTML|document\.write\(|\beval\(|new Function\(|setTimeout\(\s*[\'"]|setInterval\(\s*[\'"]|\.srcdoc\b/');
         $this->assertSame([], $bad, "API dangereuse dans le JavaScript :\n" . implode("\n", $bad));
+        // code laissé APRÈS un commentaire « // » sur la même ligne : il serait désactivé en silence (régression réelle : un titre jamais rempli).
+        // Heuristique : le texte d'un commentaire de fin de ligne ne se termine pas par « ; » (le début de la ligne doit avoir des guillemets équilibrés).
+        $swallowed = static function (string $line): bool {
+            if (preg_match('/^\s*(\/\/|\*|\/\*)/', $line) || !preg_match('/^(.*?\S)\s+\/\/\s(.*)$/', rtrim($line), $m)) {
+                return false;
+            }
+            return substr_count($m[1], "'") % 2 === 0 && substr_count($m[1], '"') % 2 === 0 && substr_count($m[1], '`') % 2 === 0 && str_ends_with(rtrim($m[2]), ';');
+        };
+        $this->assertTrue($swallowed("var t = f(); // note ici title.value = a ? a.title : '';"), 'le détecteur reconnaît le défaut d\'origine');
+        $this->assertTrue(!$swallowed("var u = 'http://x'; foo(); // appel normal"), 'commentaire ordinaire');
+        $this->assertTrue(!$swallowed("var u = 'a // b'; x();"), 'double barre dans une chaîne');
+        $hits = [];
+        foreach ($this->files(['public/assets/js', 'public/service-worker.js'], 'js') as $f) {
+            foreach (file($f) ?: [] as $i => $line) {
+                if ($swallowed($line)) {
+                    $hits[] = str_replace($this->root . '/', '', $f) . ':' . ($i + 1) . ' : ' . trim($line);
+                }
+            }
+        }
+        $this->assertSame([], $hits, "code après un commentaire de fin de ligne (désactivé en silence) :\n" . implode("\n", $hits));
         $node = trim((string) shell_exec('command -v node 2>/dev/null'));
         if ($node === '') {
             return;

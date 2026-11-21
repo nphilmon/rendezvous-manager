@@ -53,6 +53,14 @@ const settings = (p) => p.evaluate(async () => (await (await fetch('/api/v1/sett
   await p2.waitForFunction(() => window.RVM.ui.step === 15); await p2.waitForTimeout(400);
   check((await settings(p)).ui.step === 15, 'réglage fait dans le calendrier : enregistré sur le serveur');
   const theme = await p2.evaluate(() => localStorage.getItem('rvm_cal_settings')); check(theme === null, 'plus aucun réglage de calendrier dans le navigateur');
+  // calendriers masqués : enregistrés sur le serveur, retrouvés sur un autre appareil
+  await p2.waitForSelector('.cal-item input'); const calName = await p2.locator('.cal-item .name').first().textContent();
+  await p2.uncheck('.cal-item >> nth=0 >> input'); await p2.waitForFunction(() => window.RVM.ui.hidden_calendars.length === 1);
+  await p2.waitForTimeout(500);
+  check((await settings(p)).ui.hidden_calendars.length === 1, 'calendrier masqué (« ' + calName.trim() + ' ») : enregistré sur le serveur');
+  const ctx4 = await b.newContext({ viewport: { width: 1280, height: 900 } }); const p4 = await ctx4.newPage(); p4.on('pageerror', e => problems.push(e.message));
+  await login(p4, 'admin'); await p4.goto(BASE + '/calendar?view=week&date=2026-11-18'); await p4.waitForSelector('.cal-item input');
+  check(await p4.locator('.cal-item >> nth=0 >> input').isChecked() === false && await p4.locator('.cal-item input:checked').count() >= 1, 'autre appareil : le même calendrier est masqué, les autres restent affichés');
 
   // ---- reprise des anciens réglages du navigateur (compte sans réglage serveur) ----
   const ctx3 = await b.newContext({ viewport: { width: 1280, height: 900 } });

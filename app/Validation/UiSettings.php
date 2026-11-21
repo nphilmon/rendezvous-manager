@@ -65,6 +65,16 @@ final class UiSettings
                 $e['default_calendar'][] = 'Calendrier introuvable ou sans droit de création.';
             }
         }
+        if (array_key_exists('hidden_calendars', $in)) {
+            $v = $in['hidden_calendars'];
+            if ($calendarOk === null) {
+                $e['hidden_calendars'][] = 'Réglage personnel : non applicable à l\'organisation.';
+            } elseif (!is_array($v) || !array_is_list($v) || count($v) > 200 || array_filter($v, static fn ($x) => !is_int($x) || $x < 1) !== []) {
+                $e['hidden_calendars'][] = 'Liste de 200 identifiants de calendrier au plus attendue.';
+            } else {
+                $out['hidden_calendars'] = array_values(array_unique($v));
+            }
+        }
         $merged = $out + $current;
         if (($merged['end_hour'] ?? 24) <= ($merged['start_hour'] ?? 0)) {
             $e['end_hour'][] = 'La fin de la grille doit être postérieure au début.';

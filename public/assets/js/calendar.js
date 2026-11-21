@@ -31,7 +31,7 @@
     settings.hour12 = settings.hour12 === true;
   }
   sanitize();
-  var hidden = load('rvm_cal_hidden', []); // calendriers masqués
+  var hidden = (window.RVM.ui && Array.isArray(window.RVM.ui.hidden_calendars) ? window.RVM.ui.hidden_calendars : []).slice(); // calendriers masqués (réglage enregistré sur le serveur)
 
   // ---- Fuseau horaire : "heure murale" = ms UTC dont les composantes UTC sont l'heure locale du fuseau ----------
   var partsFmt = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -628,7 +628,7 @@
       l.append(cb, sw, el('span', 'name', c.name + (c.mine ? '' : ' (' + c.owner + ')')));
       cb.addEventListener('change', function () {
         hidden = hidden.filter(function (x) { return x !== c.id; }); if (!cb.checked) hidden.push(c.id);
-        save('rvm_cal_hidden', hidden); render();
+        window.RVM.saveUi({ hidden_calendars: hidden.slice() }); render();
       });
       box.appendChild(l);
     });

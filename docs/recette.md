@@ -60,7 +60,7 @@ Les tests utilisent une base **isolée** dont le nom doit finir par `_test` (ref
 | Sauvegardes **chiffrées** | **Chiffrées** (AES-256-GCM) dès que `BACKUP_KEY` est renseignée ; en clair sinon | clé à conserver hors du serveur ; secrets de `.env` non chiffrés au repos |
 | Server-Sent Events « éventuellement » | Interrogation périodique (30 s par défaut, 2 à 300) | première implémentation prévue par le cahier |
 | Langue, format de date (§ 21) | Français uniquement ; format de date fixe | non réalisé |
-| Couleurs et calendriers affichés (§ 21) | couleurs par calendrier/catégorie ; masquage de calendriers conservé **dans le navigateur** | non enregistré sur le serveur |
+| Couleurs et calendriers affichés (§ 21) | couleurs par calendrier et par catégorie ; **calendriers masqués enregistrés sur le serveur** (même affichage sur chaque appareil) | réalisé |
 | « État du serveur, version de la base, migrations » dans l'administration | panneau « État du serveur » dans Paramètres (administrateur) et `GET /api/v1/system` | réalisé |
 | Audit des « changements de permissions » | `calendar.permissions_changed` (droits avant/après par utilisateur) ; rôles et comptes via `user.*` | réalisé |
 

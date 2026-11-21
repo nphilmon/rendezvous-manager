@@ -48,7 +48,7 @@ Menu **Rapports** : choisissez une période (ce mois, 30 derniers jours, cette a
 
 Page **Paramètres** (menu rond en haut à droite). Tout est enregistré **sur le serveur** : vous retrouvez les mêmes préférences sur chaque appareil.
 - **Profil** : prénom, nom, fuseau horaire (l'identifiant et l'adresse e-mail se changent par un administrateur).
-- **Affichage et calendrier** : thème (clair, sombre, automatique), vue d'ouverture du calendrier, premier jour de la semaine, heures de début et de fin de la grille, pas horaire, week-end, format 12/24 heures, durée par défaut d'un nouveau rendez-vous, calendrier proposé par défaut. Le bouton « Réglages » du calendrier modifie les mêmes réglages.
+- **Affichage et calendrier** : thème (clair, sombre, automatique), vue d'ouverture du calendrier, premier jour de la semaine, heures de début et de fin de la grille, pas horaire, week-end, format 12/24 heures, durée par défaut d'un nouveau rendez-vous, calendrier proposé par défaut. Le bouton « Réglages » du calendrier modifie les mêmes réglages ; les calendriers que vous masquez dans la barre latérale du calendrier sont aussi enregistrés sur le serveur.
 - Si vous n'avez rien choisi, ce sont les valeurs par défaut de l'**organisation** qui s'appliquent.
 - **Organisation** (administrateur) : nom affiché (titre, en-tête, page de connexion), fuseau horaire par défaut des nouveaux comptes et valeurs par défaut d'affichage.
 
