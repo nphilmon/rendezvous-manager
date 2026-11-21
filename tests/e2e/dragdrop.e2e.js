@@ -104,10 +104,10 @@ async function openWeek(page) {
   // 9. journée entière : chip glissé de deux jours (jeu.–ven. → sam.–dim.)
   await openWeek(p);
   const s0 = await appt(p, 'Séminaire');
-  const chip = p.locator('.allday-cell .ev:has-text("Séminaire")').first(); const cb = await chip.boundingBox();
+  const chip = p.locator('.tg-allday .ev.bar:has-text("Séminaire")').first(); const cb = await chip.boundingBox();
   const dw = (await p.locator('.allday-cell').nth(1).boundingBox()).x - (await p.locator('.allday-cell').nth(0).boundingBox()).x;
   await drag(p, { x: cb.x + 20, y: cb.y + cb.height / 2 }, { x: cb.x + 20 + 2 * dw, y: cb.y + cb.height / 2 });
-  await p.waitForFunction(() => document.querySelectorAll('.allday-cell .ev').length === 2);
+  await p.waitForFunction(() => document.querySelectorAll('.tg-allday .ev.bar').length === 1);
   const s1 = await appt(p, 'Séminaire');
   check(s1.start === '2026-11-21T00:00:00Z' && s1.end === '2026-11-23T00:00:00Z' && s0.all_day && s1.all_day, 'journée entière : décalée de 2 jours, reste « journée entière »');
 

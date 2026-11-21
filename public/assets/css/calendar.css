@@ -23,7 +23,12 @@
 .day-head .dnum{font-size:1.35rem;line-height:1.6rem;width:2rem;height:2rem;display:grid;place-items:center;border-radius:50%}
 .day-head:hover .dnum{background:var(--brand-soft)}
 .day-head.today .dow{color:var(--brand)}.day-head.today .dnum{background:var(--brand);color:var(--brand-fg)}
-.allday-cell{border-left:1px solid var(--line);padding:2px;min-height:26px;display:flex;flex-direction:column;gap:2px}
+.tg-allday{grid-auto-rows:minmax(26px,auto)}
+.allday-cell{border-left:1px solid var(--line);min-height:26px}
+.ev.bar{position:relative;z-index:2;align-self:start;width:auto;margin:2px 3px}
+.ev.bar.cont-r{clip-path:polygon(0 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,0 100%);padding-right:12px}
+.ev.bar.cont-l{clip-path:polygon(0 0,100% 0,100% 100%,0 100%,9px 50%);padding-left:12px}
+.ev.bar.cont-l.cont-r{clip-path:polygon(0 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,0 100%,9px 50%)}
 .tg-hours{position:sticky;left:0;border-right:1px solid var(--line)}
 .tg-hours{position:relative}
 .hour{position:absolute;right:6px;transform:translateY(-50%);font-size:.7rem;color:var(--muted);white-space:nowrap}

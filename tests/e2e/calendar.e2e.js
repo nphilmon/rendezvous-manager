@@ -21,7 +21,8 @@ async function login(page, user) {
   await p.goto(BASE + '/calendar?view=week&date=2026-11-18'); await p.waitForSelector('.tg-col .ev');
   check((await p.$$('.day-head')).length === 7, 'semaine : 7 colonnes');
   check((await p.$$('.tg-col .ev')).length === 7, 'semaine : 7 rendez-vous horaires positionnés');
-  check((await p.$$('.allday-cell .ev')).length === 2, 'semaine : journée entière sur 2 jours');
+  const bars = await p.$$eval('.tg-allday .ev.bar', e => e.map(x => x.getBoundingClientRect().width)); const cw = await p.$eval('.allday-cell', x => x.getBoundingClientRect().width);
+  check(bars.length === 1 && bars[0] > 1.8 * cw, 'semaine : journée entière sur 2 jours = une seule barre continue');
   const boxes = await p.$$eval('.tg-row.tg-body > .tg-col:nth-child(4) .ev.blk', e => e.map(x => x.style.left));
   check(new Set(boxes).size >= 3, 'chevauchement : 3 colonnes distinctes le mercredi');
   check(await p.locator('.ev.cancelled').count() === 1, 'rendez-vous annulé barré');

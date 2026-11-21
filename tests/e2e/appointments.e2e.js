@@ -121,7 +121,7 @@ const check = (ok, msg) => { console.log((ok ? '  ok    ' : '  FAIL  ') + msg); 
   await p.locator('.allday-cell').nth(0).click({ position: { x: 10, y: 10 } }); await p.waitForSelector('.form-dialog[open]');
   check(await p.isChecked('#af-allday') && await p.isHidden('#af-st'), 'cellule journée entière : case cochée, heures masquées');
   await p.fill('#af-title-in', 'Férié'); await p.click('.af-actions >> text=Enregistrer >> nth=0');
-  await p.waitForSelector('.allday-cell .ev:has-text("Férié")'); check(true, 'journée entière créée (date de fin inclusive côté formulaire)');
+  await p.waitForSelector('.tg-allday .ev.bar:has-text("Férié")'); check(true, 'journée entière créée (date de fin inclusive côté formulaire)');
 
   // 10. lecture seule : aucune création
   const m = await b.newContext({ viewport: { width: 1280, height: 800 } }); const mp = await m.newPage();

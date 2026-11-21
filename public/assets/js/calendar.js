@@ -211,6 +211,24 @@
     return null;
   }
 
+  /** Répartit les rendez-vous « journée entière » en lignes (voies) : chacun occupe une barre de la première à la dernière colonne visible. */
+  function layoutAllDay(vis, days) {
+    var items = [];
+    vis.forEach(function (ev) {
+      if (!ev.allDay) return;
+      var a = -1, b = -1;
+      days.forEach(function (d, i) { if (ev.s < d + DAY && ev.e > d) { if (a < 0) a = i; b = i; } });
+      if (a >= 0) items.push({ ev: ev, a: a, b: b, lane: 0 });
+    });
+    items.sort(function (x, y) { return (x.a - y.a) || ((y.b - y.a) - (x.b - x.a)) || (x.ev.s - y.ev.s); });
+    var ends = [];
+    items.forEach(function (it) {
+      var l = 0; while (l < ends.length && ends[l] >= it.a) l++;
+      it.lane = l; ends[l] = it.b;
+    });
+    return { items: items, count: ends.length };
+  }
+
   function renderTimeGrid(box, vis, r) {
     var days = dayList(r), n = days.length, p = ppm(), hours = settings.endHour - settings.startHour, height = hours * 60 * p;
     var scroll = el('div', 'tg-scroll'); scroll.tabIndex = -1;
@@ -219,7 +237,9 @@
     var top = el('div', 'tg-top'), head = el('div', 'tg-row tg-head'), allday = el('div', 'tg-row tg-allday');
     head.appendChild(el('div', 'tg-gutter')); var ad = el('div', 'tg-gutter tg-allday-label', 'Journée'); allday.appendChild(ad);
     var t0 = today(), hiddenCount = 0, shownIds = {};
-    days.forEach(function (d) {
+    var lay = layoutAllDay(vis, days), laneCount = Math.max(1, lay.count);
+    ad.style.gridColumn = '1'; ad.style.gridRow = '1 / span ' + laneCount;
+    days.forEach(function (d, di) {
       var a = el('a', 'day-head' + (d === t0 ? ' today' : ''));
       a.href = '/calendar?view=day&date=' + isoDate(d);
       a.appendChild(el('span', 'dow', fmtDay(d, { weekday: 'short' })));
@@ -228,12 +248,22 @@
       a.addEventListener('click', function (e) { if (state.view !== 'day' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); go('day', d); } });
       head.appendChild(a);
       var cell = el('div', 'allday-cell' + (d === t0 ? ' today' : '')); cell.dataset.day = d;
+      cell.style.gridColumn = String(di + 2); cell.style.gridRow = '1 / span ' + laneCount;
       cell.addEventListener('click', function (e) { if (canCreate() && !e.target.closest('.ev')) openCreate(d, d, true); });
-      vis.filter(function (ev) { return ev.allDay && ev.s < d + DAY && ev.e > d; }).forEach(function (ev) {
-        shownIds[ev.key] = 1; var chip = cell.appendChild(eventButton(ev, 'chip')); chip.appendChild(el('span', 't', ev.raw.title));
-        if (editable(ev)) makeDayDraggable(chip, ev, d);
-      });
       allday.appendChild(cell);
+    });
+    // Rendez-vous « journée entière » : une seule barre continue sur toute leur durée visible (comme un agenda classique).
+    lay.items.forEach(function (it) {
+      var ev = it.ev; shownIds[ev.key] = 1;
+      var bar = eventButton(ev, 'chip bar' + (ev.s < days[it.a] ? ' cont-l' : '') + (ev.e > days[it.b] + DAY ? ' cont-r' : ''));
+      bar.appendChild(el('span', 't', ev.raw.title));
+      bar.style.gridColumn = (it.a + 2) + ' / ' + (it.b + 3); bar.style.gridRow = String(it.lane + 1);
+      allday.appendChild(bar);
+      if (editable(ev)) makeDayDraggable(bar, ev, function (down) {
+        var found = days[it.a];
+        allday.querySelectorAll('.allday-cell').forEach(function (c) { var r = c.getBoundingClientRect(); if (down.clientX >= r.left && down.clientX < r.right) found = +c.dataset.day; });
+        return found;
+      });
     });
     top.appendChild(head); top.appendChild(allday); tg.appendChild(top);
     // Corps horaire
@@ -496,14 +526,15 @@
   function makeDayDraggable(b, ev, day) {
     b.classList.add('editable');
     b.addEventListener('pointerdown', function (down) {
-      var res = { s: ev.s, e: ev.e }, hl = null;
+      var res = { s: ev.s, e: ev.e }, hl = null, grab = typeof day === 'function' ? day(down) : day;
       pointerDrag(down, b, {
         onMove: function (e) {
-          var el2 = document.elementFromPoint(e.clientX, e.clientY), cell = el2 && el2.closest('[data-day]');
+          var cell = null, all = document.elementsFromPoint(e.clientX, e.clientY);
+          for (var i = 0; i < all.length && !cell; i++) { cell = all[i].closest ? all[i].closest('[data-day]') : null; }
           if (hl) hl.classList.remove('drop-target');
           if (!cell || cell.classList.contains('tg-col')) { hl = null; res.s = ev.s; res.e = ev.e; return; }
           hl = cell; cell.classList.add('drop-target');
-          var dd = +cell.dataset.day - day; res.s = ev.s + dd; res.e = ev.e + dd;
+          var dd = +cell.dataset.day - grab; res.s = ev.s + dd; res.e = ev.e + dd;
         },
         onDrop: function () { if (hl) hl.classList.remove('drop-target'); if (res.s === ev.s) return; commit(ev, res.s, res.e, 'Rendez-vous déplacé.'); },
         onCancel: function () { if (hl) hl.classList.remove('drop-target'); }
