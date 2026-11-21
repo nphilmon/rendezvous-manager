@@ -122,6 +122,7 @@ Faites une sauvegarde avant (page **Sauvegardes**). Une migration déjà appliqu
 | 404 sur `/login` mais pas sur les fichiers statiques | réécriture d'URL absente : `mod_rewrite` / `.htaccess` ignoré (nginx), `AllowOverride All` manquant (Apache) |
 | Page blanche ou erreur 500 | consultez `storage/logs/*.log` ; version de PHP < 8.3, extension manquante |
 | « Base inaccessible » | identifiants, hôte, droits ; mode TLS `verify` sans autorité de certification valide |
+| Le site affiche « Index of / » (liste de dossiers) ou 404 Apache | la racine du domaine n'est pas `public/` : `scripts/fix_docroot.sh DOMAINE repositories/rendezvous-manager/public` la corrige (interface cPanel, sinon lien symbolique, sans rien supprimer) |
 | Redirection vers `/install` | `storage/install.lock` absent : l'installation n'est pas terminée (ou le fichier a été supprimé) |
 | Pas de rappels | le cron `reminder_worker.php` ne tourne pas : `php scripts/healthcheck.php` |
 | Impossible de se connecter, cookie refusé | `COOKIE_SECURE=true` en HTTP : utilisez HTTPS |
