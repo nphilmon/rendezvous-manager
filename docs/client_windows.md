@@ -2,7 +2,7 @@
 
 > **État :** compilé avec succès par GitHub Actions (exécution du 21/11/2026, .NET 8) et essayé par le propriétaire du projet sur son poste Windows : la fenêtre s'ouvre, l'application fonctionne et les autres points de la recette en fin de document ont été confirmés fonctionnels (déclaration de l'utilisateur, sans détail par point). Essayé sur un seul poste ; le code n'a jamais été exécuté par son auteur (pas de Windows ni de .NET dans son environnement).
 
-> **Installeur : ajouté après cette validation, non compilé ni essayé** (voir la section « L'installeur » ; à confirmer par un premier essai).
+> **Installeur :** compilé par GitHub Actions (exécution du 21/11/2026) et installé avec succès par le propriétaire du projet sur son poste Windows (déclaration de l'utilisateur, sans détail par option ; un seul poste, non testé sur « installation pour tous les utilisateurs » ni sur la désinstallation).
 
 ## Ce que c'est
 
