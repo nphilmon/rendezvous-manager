@@ -41,6 +41,17 @@ final class CalendarRepository
         return $st->fetch() ?: null;
     }
 
+    /** Crée « Mon calendrier » (personnel, privé) si l'utilisateur n'a aucun calendrier. @return int|null identifiant créé, null s'il en avait déjà un */
+    public function ensureDefault(int $ownerId, string $timezone): ?int
+    {
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM calendars WHERE owner_id = ? AND deleted_at IS NULL');
+        $st->execute([$ownerId]);
+        if ((int) $st->fetchColumn() > 0) {
+            return null;
+        }
+        return $this->insert($ownerId, ['name' => 'Mon calendrier', 'description' => null, 'color' => '#3b82f6', 'kind' => 'personal', 'visibility' => 'private', 'timezone' => $timezone]);
+    }
+
     /** @param array<string,mixed> $d */
     public function insert(int $ownerId, array $d): int
     {

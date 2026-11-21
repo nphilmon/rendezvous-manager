@@ -97,6 +97,9 @@ final class UserAdminService
             throw self::duplicate($x);
         }
         $this->pdo->prepare('UPDATE users SET must_change_password = 1 WHERE id = ?')->execute([$id]);
+        if ($d['role'] !== 'readonly') {
+            (new \App\Repositories\CalendarRepository($this->pdo))->ensureDefault($id, $d['timezone']);
+        }
         $this->audit->log('user.create', $admin->id, 'user', $id, $ip, ['username' => $username, 'role' => $d['role']]);
         return ['user' => $this->get($id), 'temporary_password' => $password];
     }

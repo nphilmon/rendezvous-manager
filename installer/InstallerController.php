@@ -260,6 +260,7 @@ final class InstallerController
                         'first_name' => $v['first_name'], 'last_name' => $v['last_name'],
                         'password_hash' => PasswordHasher::hash($pw), 'timezone' => (string) Config::get('app.timezone', 'Europe/Paris'),
                     ]);
+                    (new \App\Repositories\CalendarRepository($ctx['pdo']))->ensureDefault($id, (string) Config::get('app.timezone', 'Europe/Paris'));
                     (new AuditLogger($ctx['pdo']))->log('install.admin_created', $id, 'user', $id, null);
                     $created = $exists = true;
                 } catch (\PDOException) {
