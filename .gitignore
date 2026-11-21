@@ -14,3 +14,5 @@
 .vscode/
 /storage/sessions/*
 /storage/install.token
+installer-out/
+out/
