@@ -74,6 +74,7 @@ RendezVous-Manager-Web/
 | [docs/recette.md](docs/recette.md) | critères d'acceptation reliés aux tests, écarts assumés, ce qui n'est pas vérifié |
 | [docs/notifications.md](docs/notifications.md) | moteur de notifications, cron, Web Push, e-mail |
 | [docs/client_windev.md](docs/client_windev.md) | client de bureau Windows (WinDev) : fenêtre native affichant l'application, ou client REST ; **guide non testé** |
+| [docs/client_windows.md](docs/client_windows.md) | client Windows `.exe` (C#, WebView2) compilé par GitHub Actions ; **non compilé ni testé par son auteur** |
 | [docs/nginx.conf.example](docs/nginx.conf.example) | exemple de configuration nginx |
 
 ## Plan de développement

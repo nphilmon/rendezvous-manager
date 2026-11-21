@@ -1,5 +1,7 @@
 # Client Windows (WinDev)
 
+> **Le client Windows livré est décrit dans `docs/client_windows.md` (programme .exe en C#, sans WinDev).** Ce document-ci ne concerne que la variante WinDev.
+>
 > **État : guide non testé.** Ce dépôt ne contient pas de projet WinDev (`.WDP`) : WinDev est un outil
 > propriétaire qui ne peut ni être installé ni exécuté dans l'environnement de développement du serveur.
 > Ce document décrit la marche à suivre et le code WLanguage à saisir ; **la syntaxe exacte doit être

@@ -1,0 +1,32 @@
+name: Client Windows
+
+# Compile le client de bureau Windows (.NET 8 + WebView2) sur un serveur Windows hébergé par GitHub.
+# Lancement manuel : onglet Actions → « Client Windows » → Run workflow. Le résultat est téléchargeable (artefact).
+on:
+  workflow_dispatch:
+  push:
+    tags: ['client-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publication (autonome, un seul fichier)
+        run: >
+          dotnet publish client-windows/RendezVousManager.csproj -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out
+      - name: Archive
+        shell: pwsh
+        run: Compress-Archive -Path out\RendezVousManager.exe -DestinationPath RendezVousManager-win-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RendezVousManager-win-x64
+          path: RendezVousManager-win-x64.zip
+          if-no-files-found: error
