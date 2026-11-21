@@ -50,7 +50,7 @@ Dans `.env` : `MAIL_ENABLED=true`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_ENCRYPTION` (
 
 ## Réglages utilisateur (`GET/PUT /api/v1/settings`, page Paramètres)
 
-`enabled`, `channels` (seul `inapp` pour l'instant), `privacy` (`full` | `minimal`), `missed` (`deliver` | `skip`), `quiet_start` / `quiet_end` (HH:MM, heure locale), `default_reminder` (minutes).
+`enabled`, `channels` (`inapp` toujours, plus `push` et `email` lorsque le serveur les propose et que l'utilisateur les active), `privacy` (`full` | `minimal`), `missed` (`deliver` | `skip`), `quiet_start` / `quiet_end` (HH:MM, heure locale), `default_reminder` (minutes).
 
 ## Séries et journées entières
 
