@@ -337,7 +337,7 @@
     var summary = el('div', 'alert alert-error'); summary.id = 'af-summary'; summary.setAttribute('role', 'alert'); summary.hidden = true; form.appendChild(summary);
     var conflictBox = el('div', 'alert af-conflict'); conflictBox.id = 'af-conflict'; conflictBox.setAttribute('role', 'alert'); conflictBox.hidden = true; form.appendChild(conflictBox);
 
-    var title = input('text', { maxlength: 200, required: 'required', autocomplete: 'off' }); title.value = a ? a.title : '';
+    var title = input('text', { maxlength: 200, required: 'required', autocomplete: 'off', 'data-lpignore': 'true', 'data-1p-ignore': 'true', 'data-bwignore': 'true' }); // les gestionnaires de mots de passe n'ont rien à proposer ici title.value = a ? a.title : '';
     form.appendChild(field('Titre', title, 'af-title-in'));
     var desc = el('textarea'); desc.rows = 3; desc.maxLength = 10000; desc.value = a && a.description ? a.description : '';
     form.appendChild(field('Description', desc, 'af-desc'));
