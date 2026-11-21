@@ -84,3 +84,13 @@ Touche **C** : nouveau rendez-vous ; **Échap** : fermer une fenêtre. Tout est 
 ## Limites connues
 
 L'application est en français uniquement. Aucune application mobile native ; la page fonctionne sur téléphone et tablette. Voir le `README.md` pour la liste précise de ce qui est testé ou non.
+
+## Installer l'application sur un poste ou un téléphone (PWA)
+
+L'application peut s'installer comme un programme, **uniquement en HTTPS** :
+
+- **Windows, Mac, Linux (Chrome, Edge)** : icône « Installer » dans la barre d'adresse, ou menu ⋮ → « Installer RendezVous Manager ». Une fenêtre sans barre d'adresse s'ouvre, avec une icône sur le bureau.
+- **Android (Chrome)** : menu ⋮ → « Installer l'application » (ou « Ajouter à l'écran d'accueil »).
+- **iPhone / iPad (Safari)** : bouton Partager → « Sur l'écran d'accueil ». Les notifications Web Push n'y fonctionnent qu'après cet ajout (iOS 16.4 ou plus récent).
+
+L'application installée reste un simple raccourci vers le site : aucune donnée n'est mise en cache hors ligne, il faut une connexion pour l'utiliser. Les notifications Web Push restent soumises à la permission accordée dans le navigateur.

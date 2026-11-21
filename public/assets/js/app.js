@@ -216,3 +216,12 @@
     });
   }
 })();
+
+// ---- Application installable : le service worker (sans cache hors ligne) est enregistré dès le chargement ----------
+(function () {
+  'use strict';
+  if (!('serviceWorker' in navigator) || (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1')) return;
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(function () { /* l'application reste utilisable sans */ });
+  });
+})();
