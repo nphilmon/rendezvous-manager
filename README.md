@@ -73,6 +73,7 @@ RendezVous-Manager-Web/
 | [docs/serveur_linux.md](docs/serveur_linux.md) | déploiement pas à pas sur serveur Linux (les 20 étapes du cahier des charges : Apache/nginx, PHP, MariaDB, phpMyAdmin, HTTPS, pare-feu, Web Push, SMTP, sauvegardes, recette) |
 | [docs/recette.md](docs/recette.md) | critères d'acceptation reliés aux tests, écarts assumés, ce qui n'est pas vérifié |
 | [docs/notifications.md](docs/notifications.md) | moteur de notifications, cron, Web Push, e-mail |
+| [docs/client_windev.md](docs/client_windev.md) | client de bureau Windows (WinDev) : fenêtre native affichant l'application, ou client REST ; **guide non testé** |
 | [docs/nginx.conf.example](docs/nginx.conf.example) | exemple de configuration nginx |
 
 ## Plan de développement
